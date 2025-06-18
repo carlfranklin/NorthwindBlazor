@@ -136,7 +136,7 @@
 @code {
     private List<Territory> territories = new();
     private List<Territory> filteredTerritories = new();
-    private List<Region> regions = new();
+    private List<(int RegionId, string RegionDescription)> regions = new();
     private Territory? selectedTerritory;
     private string originalTerritoryId = "";
     private string filterText = "";
@@ -191,7 +191,7 @@
 
     private Task LoadRegions()
     {
-        var result = DataManager.GetAllRegions();
+        var result = DataManager.GetRegionsForDropdown();
         if (result.Success)
         {
             regions = result.Data;
@@ -205,7 +205,7 @@
 
     private string? GetRegionName(int regionId)
     {
-        return regions.FirstOrDefault(r => r.RegionId == regionId)?.RegionDescription ?? "Unknown Region";
+        return regions.FirstOrDefault(r => r.RegionId == regionId).RegionDescription ?? "Unknown Region";
     }
 
     private void SelectTerritory(Territory territory)

@@ -2008,190 +2008,40 @@ public class DataManager
 
     #endregion
 
-    #region Region Methods
 
-    public ReturnListType<Region> GetAllRegions()
+
+    #region Territory Methods
+
+    public ReturnListType<(int RegionId, string RegionDescription)> GetRegionsForDropdown()
     {
         try
         {
-            var regions = new List<Region>();
+            var regions = new List<(int RegionId, string RegionDescription)>();
             using var connection = GetConnection();
             connection.Open();
             
             const string sql = @"
                 SELECT RegionID, RegionDescription 
-                FROM Region";
+                FROM Regions";
             
             using var command = new SqliteCommand(sql, connection);
             using var reader = command.ExecuteReader();
             
             while (reader.Read())
             {
-                regions.Add(new Region
-                {
-                    RegionId = reader.GetInt32("RegionID"),
-                    RegionDescription = reader.GetString("RegionDescription")
-                });
+                regions.Add((
+                    reader.GetInt32("RegionID"),
+                    reader.GetString("RegionDescription")
+                ));
             }
             
-            return new ReturnListType<Region>(true, regions);
+            return new ReturnListType<(int RegionId, string RegionDescription)>(true, regions);
         }
         catch (Exception ex)
         {
-            return HandleListError<Region>(ex, "GetAllRegions");
+            return new ReturnListType<(int RegionId, string RegionDescription)>(false, new List<(int RegionId, string RegionDescription)>(), new List<string> { $"Error in GetRegionsForDropdown: {ex.Message}" });
         }
     }
-
-    public ReturnType<Region> GetRegionById(int regionId)
-    {
-        try
-        {
-            using var connection = GetConnection();
-            connection.Open();
-            
-            const string sql = @"
-                SELECT RegionID, RegionDescription
-                FROM Region
-                WHERE RegionID = @regionId";
-            
-            using var command = new SqliteCommand(sql, connection);
-            command.Parameters.AddWithValue("@regionId", regionId);
-            using var reader = command.ExecuteReader();
-            
-            if (reader.Read())
-            {
-                var region = new Region
-                {
-                    RegionId = reader.GetInt32("RegionID"),
-                    RegionDescription = reader.GetString("RegionDescription")
-                };
-                
-                // Load Territories for this Region
-                reader.Close();
-                const string territoriesSql = @"
-                    SELECT TerritoryID, TerritoryDescription, RegionID
-                    FROM Territories
-                    WHERE RegionID = @regionId";
-                
-                using var territoriesCommand = new SqliteCommand(territoriesSql, connection);
-                territoriesCommand.Parameters.AddWithValue("@regionId", regionId);
-                using var territoriesReader = territoriesCommand.ExecuteReader();
-                
-                var territories = new List<Territory>();
-                while (territoriesReader.Read())
-                {
-                    territories.Add(new Territory
-                    {
-                        TerritoryId = territoriesReader.GetString("TerritoryID"),
-                        TerritoryDescription = territoriesReader.GetString("TerritoryDescription"),
-                        RegionId = territoriesReader.GetInt32("RegionID")
-                    });
-                }
-                region.Territories = territories;
-                
-                return new ReturnType<Region>(true, region);
-            }
-            
-            return new ReturnType<Region>(false, null, new List<string> { "Region not found" });
-        }
-        catch (Exception ex)
-        {
-            return HandleError<Region>(ex, "GetRegionById");
-        }
-    }
-
-    public ReturnType<Region> UpdateRegion(Region region)
-    {
-        try
-        {
-            using var connection = GetConnection();
-            connection.Open();
-            
-            const string sql = @"
-                UPDATE Region 
-                SET RegionDescription = @regionDescription
-                WHERE RegionID = @regionId";
-            
-            using var command = new SqliteCommand(sql, connection);
-            command.Parameters.AddWithValue("@regionId", region.RegionId);
-            command.Parameters.AddWithValue("@regionDescription", region.RegionDescription);
-            
-            var rowsAffected = command.ExecuteNonQuery();
-            
-            if (rowsAffected > 0)
-            {
-                return new ReturnType<Region>(true, region);
-            }
-            
-            return new ReturnType<Region>(false, null, new List<string> { "Region not found or no changes made" });
-        }
-        catch (Exception ex)
-        {
-            return HandleError<Region>(ex, "UpdateRegion");
-        }
-    }
-
-    public ReturnType<Region> DeleteRegion(Region region)
-    {
-        return DeleteRegionById(region.RegionId);
-    }
-
-    public ReturnType<Region> DeleteRegionById(int regionId)
-    {
-        try
-        {
-            using var connection = GetConnection();
-            connection.Open();
-            
-            const string sql = "DELETE FROM Region WHERE RegionID = @regionId";
-            
-            using var command = new SqliteCommand(sql, connection);
-            command.Parameters.AddWithValue("@regionId", regionId);
-            
-            var rowsAffected = command.ExecuteNonQuery();
-            
-            if (rowsAffected > 0)
-            {
-                return new ReturnType<Region>(true, null);
-            }
-            
-            return new ReturnType<Region>(false, null, new List<string> { "Region not found" });
-        }
-        catch (Exception ex)
-        {
-            return HandleError<Region>(ex, "DeleteRegionById");
-        }
-    }
-
-    public ReturnType<Region> AddRegion(Region region)
-    {
-        try
-        {
-            using var connection = GetConnection();
-            connection.Open();
-            
-            const string sql = @"
-                INSERT INTO Region (RegionDescription)
-                VALUES (@regionDescription);
-                SELECT last_insert_rowid();";
-            
-            using var command = new SqliteCommand(sql, connection);
-            command.Parameters.AddWithValue("@regionDescription", region.RegionDescription);
-            
-            var newId = Convert.ToInt32(command.ExecuteScalar());
-            region.RegionId = newId;
-            
-            return new ReturnType<Region>(true, region);
-        }
-        catch (Exception ex)
-        {
-            return HandleError<Region>(ex, "AddRegion");
-        }
-    }
-
-    #endregion
-
-    #region Territory Methods
 
     public ReturnListType<Territory> GetAllTerritories()
     {
@@ -2205,7 +2055,7 @@ public class DataManager
                 SELECT t.TerritoryID, t.TerritoryDescription, t.RegionID,
                        r.RegionDescription
                 FROM Territories t
-                LEFT JOIN Region r ON t.RegionID = r.RegionID";
+                LEFT JOIN Regions r ON t.RegionID = r.RegionID";
             
             using var command = new SqliteCommand(sql, connection);
             using var reader = command.ExecuteReader();
@@ -2251,7 +2101,7 @@ public class DataManager
                 SELECT t.TerritoryID, t.TerritoryDescription, t.RegionID,
                        r.RegionDescription
                 FROM Territories t
-                LEFT JOIN Region r ON t.RegionID = r.RegionID
+                LEFT JOIN Regions r ON t.RegionID = r.RegionID
                 WHERE t.TerritoryID = @territoryId";
             
             using var command = new SqliteCommand(sql, connection);
