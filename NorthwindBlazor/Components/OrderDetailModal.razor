@@ -1,0 +1,196 @@
+@using NorthwindBlazor.Models
+@using NorthwindBlazor.Data
+@inject DataManager DataManager
+
+<div class="modal-header">
+    <h5 class="modal-title">@(isEditing ? "Edit" : "Add") Order Detail</h5>
+</div>
+
+<div class="modal-body">
+    <EditForm Model="orderDetail" OnValidSubmit="HandleValidSubmit">
+        <DataAnnotationsValidator />
+        
+        <div class="mb-3">
+            <label for="productId" class="form-label">Product</label>
+            <InputSelect id="productId" @bind-Value="orderDetail.ProductId" class="form-select" disabled="@isEditing">
+                <option value="">-- Select Product --</option>
+                @foreach (var product in products)
+                {
+                    <option value="@product.ProductId">@product.ProductName</option>
+                }
+            </InputSelect>
+            <ValidationMessage For="() => orderDetail.ProductId" />
+        </div>
+        
+        <div class="mb-3">
+            <label for="unitPrice" class="form-label">Unit Price</label>
+            <InputNumber id="unitPrice" @bind-Value="orderDetail.UnitPrice" class="form-control" step="0.01" />
+            <ValidationMessage For="() => orderDetail.UnitPrice" />
+        </div>
+        
+        <div class="mb-3">
+            <label for="quantity" class="form-label">Quantity</label>
+            <InputNumber id="quantity" @bind-Value="orderDetail.Quantity" class="form-control" />
+            <ValidationMessage For="() => orderDetail.Quantity" />
+        </div>
+        
+        <div class="mb-3">
+            <label for="discount" class="form-label">Discount (%)</label>
+            <InputNumber id="discount" @bind-Value="discountPercent" class="form-control" step="0.01" />
+            <ValidationMessage For="() => orderDetail.Discount" />
+        </div>
+        
+        <ValidationSummary />
+        
+        <!-- Error Alert -->
+        @if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                <strong>Error!</strong> @errorMessage
+                <button type="button" class="btn-close" @onclick="ClearError" aria-label="Close"></button>
+            </div>
+        }
+    </EditForm>
+</div>
+
+<div class="modal-footer">
+    <button type="button" class="btn btn-secondary" @onclick="Cancel">Cancel</button>
+    <button type="button" class="btn btn-success" @onclick="HandleValidSubmit">@(isEditing ? "Update" : "Add")</button>
+</div>
+
+@code {
+    [CascadingParameter] public BlazoredModalInstance ModalInstance { get; set; } = default!;
+    
+    [Parameter] public OrderDetail OrderDetail { get; set; } = new();
+    [Parameter] public int OrderId { get; set; }
+    [Parameter] public bool IsEditing { get; set; } = false;
+    
+    private OrderDetail orderDetail = new();
+    private List<Product> products = new();
+    private bool isEditing = false;
+    private string errorMessage = "";
+    
+    // Helper property for discount display as percentage
+    private double discountPercent
+    {
+        get => orderDetail.Discount * 100;
+        set => orderDetail.Discount = value / 100;
+    }
+    
+    protected override async Task OnInitializedAsync()
+    {
+        isEditing = IsEditing;
+        
+        // Copy the passed OrderDetail or create new one
+        if (isEditing)
+        {
+            orderDetail = new OrderDetail
+            {
+                OrderId = OrderDetail.OrderId,
+                ProductId = OrderDetail.ProductId,
+                UnitPrice = OrderDetail.UnitPrice,
+                Quantity = OrderDetail.Quantity,
+                Discount = OrderDetail.Discount
+            };
+        }
+        else
+        {
+            orderDetail = new OrderDetail
+            {
+                OrderId = OrderId,
+                Quantity = 1,
+                Discount = 0
+            };
+        }
+        
+        await LoadProducts();
+    }
+    
+    private async Task LoadProducts()
+    {
+        try
+        {
+            var result = DataManager.GetAllProducts();
+            if (result.Success)
+            {
+                products = result.Data;
+                
+                // Set default unit price when product is selected
+                if (!isEditing && orderDetail.ProductId > 0)
+                {
+                    var selectedProduct = products.FirstOrDefault(p => p.ProductId == orderDetail.ProductId);
+                    if (selectedProduct != null)
+                    {
+                        orderDetail.UnitPrice = selectedProduct.UnitPrice ?? 0;
+                    }
+                }
+            }
+            else
+            {
+                errorMessage = "Failed to load products";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error loading products: {ex.Message}";
+        }
+    }
+    
+    private async Task HandleValidSubmit()
+    {
+        try
+        {
+            if (orderDetail.ProductId == 0)
+            {
+                errorMessage = "Please select a product";
+                return;
+            }
+            
+            if (orderDetail.Quantity <= 0)
+            {
+                errorMessage = "Quantity must be greater than 0";
+                return;
+            }
+            
+            if (orderDetail.UnitPrice < 0)
+            {
+                errorMessage = "Unit price cannot be negative";
+                return;
+            }
+            
+            ReturnType<OrderDetail> result;
+            
+            if (isEditing)
+            {
+                result = DataManager.UpdateOrderDetail(orderDetail);
+            }
+            else
+            {
+                result = DataManager.AddOrderDetail(orderDetail);
+            }
+            
+            if (result.Success)
+            {
+                await ModalInstance.CloseAsync(ModalResult.Ok(result.Data));
+            }
+            else
+            {
+                errorMessage = string.Join(", ", result.ErrorMessages);
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error saving order detail: {ex.Message}";
+        }
+    }
+    
+    private async Task Cancel()
+    {
+        await ModalInstance.CancelAsync();
+    }
+    
+    private void ClearError()
+    {
+        errorMessage = "";
+    }
+}
