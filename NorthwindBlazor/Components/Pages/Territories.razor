@@ -1,0 +1,314 @@
+@page "/territories"
+@using NorthwindBlazor.Models
+@using NorthwindBlazor.Data
+@inject DataManager DataManager
+@inject IJSRuntime JS
+
+<PageTitle>Territories</PageTitle>
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <h3>Territories</h3>
+        </div>
+    </div>
+    
+    <div class="row">
+        <!-- List Panel -->
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Territory List</h5>
+                    <div class="row">
+                        <div class="col-md-8">
+                            <InstantInputText @bind-Value="filterText" @bind-Value:event="oninput" @onkeyup="OnFilterTextChanged" class="form-control" placeholder="Filter territories..." />
+                        </div>
+                        <div class="col-md-4">
+                            <button class="btn btn-primary w-100" @onclick="AddNew">Add New</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body p-0" style="max-height: 70vh; overflow-y: auto;">
+                    <div class="list-group list-group-flush">
+                        <Virtualize Items="filteredTerritories" Context="territory">
+                            <div class="list-group-item list-group-item-action @(selectedTerritory?.TerritoryId == territory.TerritoryId ? "selected-item" : "")" 
+                                 @onclick="() => SelectTerritory(territory)" style="cursor: pointer;">
+                                <div class="d-flex w-100 justify-content-between">
+                                    <h6 class="mb-1">@territory.TerritoryDescription</h6>
+                                    <small>@territory.TerritoryId</small>
+                                </div>
+                                <p class="mb-1">@GetRegionName(territory.RegionId)</p>
+                            </div>
+                        </Virtualize>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Edit Panel -->
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5>@(string.IsNullOrWhiteSpace(originalTerritoryId) ? "Add New Territory" : "Edit Territory")</h5>
+                </div>
+                <div class="card-body">
+                    @if (selectedTerritory != null)
+                    {
+                        <EditForm Model="selectedTerritory" OnValidSubmit="SaveTerritory">
+                            <DataAnnotationsValidator />
+                            <ValidationSummary class="alert alert-danger" />
+                            
+                            <div class="mb-3">
+                                <label for="territoryId" class="form-label">Territory ID</label>
+                                <InstantInputText id="territoryId" @bind-Value="selectedTerritory.TerritoryId" class="form-control" />
+                                <ValidationMessage For="() => selectedTerritory.TerritoryId" />
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="territoryDescription" class="form-label">Territory Description</label>
+                                <InstantInputText id="territoryDescription" @bind-Value="selectedTerritory.TerritoryDescription" class="form-control" />
+                                <ValidationMessage For="() => selectedTerritory.TerritoryDescription" />
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="regionId" class="form-label">Region</label>
+                                <InputSelect id="regionId" @bind-Value="selectedTerritory.RegionId" class="form-select">
+                                    <option value="">-- Select Region --</option>
+                                    @foreach (var region in regions)
+                                    {
+                                        <option value="@region.RegionId">@region.RegionDescription</option>
+                                    }
+                                </InputSelect>
+                                <ValidationMessage For="() => selectedTerritory.RegionId" />
+                            </div>
+                            
+                            <div class="d-flex gap-2">
+                                <button type="submit" class="btn btn-success">
+                                    @(string.IsNullOrWhiteSpace(originalTerritoryId) ? "Add" : "Update")
+                                </button>
+                                @if (!string.IsNullOrWhiteSpace(originalTerritoryId))
+                                {
+                                    <button type="button" class="btn btn-danger" @onclick="DeleteTerritory">Delete</button>
+                                }
+                                <button type="button" class="btn btn-secondary" @onclick="ClearSelection">Clear</button>
+                            </div>
+                        </EditForm>
+                    }
+                    else
+                    {
+                        <p class="text-muted">Select a territory to edit or click "Add New" to create one.</p>
+                    }
+                </div>
+            </div>
+            
+            @if (!string.IsNullOrEmpty(errorMessage))
+            {
+                <div class="alert alert-warning alert-dismissible fade show mt-3" role="alert">
+                    <strong>Notice:</strong> @errorMessage
+                    @if (showErrorDetails && errorDetails.Any())
+                    {
+                        <hr />
+                        <ul class="mb-0">
+                            @foreach (var error in errorDetails)
+                            {
+                                <li>@error</li>
+                            }
+                        </ul>
+                    }
+                    <button type="button" class="btn-close" @onclick="ClearError"></button>
+                    @if (errorDetails.Any() && !showErrorDetails)
+                    {
+                        <br />
+                        <button type="button" class="btn btn-sm btn-outline-secondary mt-2" @onclick="ToggleErrorDetails">Show Details</button>
+                    }
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<style>
+    .selected-item {
+        background-color: #f8f9fa !important;
+    }
+</style>
+
+@code {
+    private List<Territory> territories = new();
+    private List<Territory> filteredTerritories = new();
+    private List<Region> regions = new();
+    private Territory? selectedTerritory;
+    private string originalTerritoryId = "";
+    private string filterText = "";
+    private string errorMessage = "";
+    private List<string> errorDetails = new();
+    private bool showErrorDetails = false;
+
+    protected override Task OnInitializedAsync()
+    {
+        LoadTerritories();
+        LoadRegions();
+        return Task.CompletedTask;
+    }
+
+    private void OnFilterTextChanged()
+    {
+        ApplyFilter();
+        StateHasChanged();
+    }
+
+    private void ApplyFilter()
+    {
+        if (string.IsNullOrEmpty(filterText))
+        {
+            filteredTerritories = territories.ToList();
+        }
+        else
+        {
+            var filter = filterText.ToLower();
+            filteredTerritories = territories.Where(t => 
+                (t.TerritoryId?.ToLower().Contains(filter) == true) ||
+                (t.TerritoryDescription?.ToLower().Contains(filter) == true) ||
+                GetRegionName(t.RegionId)?.ToLower().Contains(filter) == true
+            ).ToList();
+        }
+    }
+
+    private Task LoadTerritories()
+    {
+        var result = DataManager.GetAllTerritories();
+        if (result.Success)
+        {
+            territories = result.Data;
+            ApplyFilter();
+        }
+        else
+        {
+            ShowError("Failed to load territories", result.ErrorMessages);
+        }
+        return Task.CompletedTask;
+    }
+
+    private Task LoadRegions()
+    {
+        var result = DataManager.GetAllRegions();
+        if (result.Success)
+        {
+            regions = result.Data;
+        }
+        else
+        {
+            ShowError("Failed to load regions", result.ErrorMessages);
+        }
+        return Task.CompletedTask;
+    }
+
+    private string? GetRegionName(int regionId)
+    {
+        return regions.FirstOrDefault(r => r.RegionId == regionId)?.RegionDescription ?? "Unknown Region";
+    }
+
+    private void SelectTerritory(Territory territory)
+    {
+        selectedTerritory = new Territory
+        {
+            TerritoryId = territory.TerritoryId,
+            TerritoryDescription = territory.TerritoryDescription,
+            RegionId = territory.RegionId
+        };
+        originalTerritoryId = territory.TerritoryId;
+        ClearError();
+    }
+
+    private void AddNew()
+    {
+        selectedTerritory = new Territory { TerritoryId = "", TerritoryDescription = "", RegionId = 0 };
+        originalTerritoryId = "";
+        ClearError();
+    }
+
+    private Task SaveTerritory()
+    {
+        if (selectedTerritory == null) return Task.CompletedTask;
+
+        if (string.IsNullOrWhiteSpace(selectedTerritory.TerritoryId))
+        {
+            ShowError("Territory ID is required", new List<string> { "Please enter a valid Territory ID" });
+            return Task.CompletedTask;
+        }
+
+        ReturnType<Territory> result;
+        
+        if (string.IsNullOrWhiteSpace(originalTerritoryId))
+        {
+            result = DataManager.AddTerritory(selectedTerritory);
+        }
+        else
+        {
+            result = DataManager.UpdateTerritory(selectedTerritory);
+        }
+
+        if (result.Success)
+        {
+            _ = LoadTerritories();
+            if (result.Data != null)
+            {
+                originalTerritoryId = selectedTerritory.TerritoryId;
+            }
+            ClearError();
+        }
+        else
+        {
+            ShowError($"Failed to {(string.IsNullOrWhiteSpace(originalTerritoryId) ? "add" : "update")} territory", result.ErrorMessages);
+        }
+        
+        return Task.CompletedTask;
+    }
+
+    private async Task DeleteTerritory()
+    {
+        if (selectedTerritory == null || string.IsNullOrEmpty(selectedTerritory.TerritoryId)) return;
+
+        if (await JS.InvokeAsync<bool>("confirm", $"Are you sure you want to delete '{selectedTerritory.TerritoryDescription}'?"))
+        {
+            var result = DataManager.DeleteTerritory(selectedTerritory);
+            if (result.Success)
+            {
+                _ = LoadTerritories();
+                selectedTerritory = null;
+                originalTerritoryId = "";
+                ClearError();
+            }
+            else
+            {
+                ShowError("Failed to delete territory", result.ErrorMessages);
+            }
+        }
+    }
+
+    private void ClearSelection()
+    {
+        selectedTerritory = null;
+        originalTerritoryId = "";
+        ClearError();
+    }
+
+    private void ShowError(string message, List<string> details)
+    {
+        errorMessage = message;
+        errorDetails = details ?? new List<string>();
+        showErrorDetails = false;
+    }
+
+    private void ClearError()
+    {
+        errorMessage = "";
+        errorDetails.Clear();
+        showErrorDetails = false;
+    }
+
+    private void ToggleErrorDetails()
+    {
+        showErrorDetails = !showErrorDetails;
+    }
+}
