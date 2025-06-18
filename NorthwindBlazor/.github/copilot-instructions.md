@@ -14,6 +14,9 @@ This is a Blazor Web application that lets the user manage the Northwind databas
 - Check for null values in both incoming models and database results.
 - Use try/catch exception handling around all database operations.
 
+## Code Generation Policies
+- Never create multiple partial classes. Always generate one file per class.
+
 ## Blazor EditForm Policies
 - Use the EditForm component for all forms.
 - Include validation attributes in the model classes for data annotations.
