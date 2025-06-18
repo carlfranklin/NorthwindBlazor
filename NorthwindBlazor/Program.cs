@@ -1,10 +1,14 @@
 using NorthwindBlazor.Components;
+using NorthwindBlazor.Data;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
+
+// Add DataManager service
+builder.Services.AddScoped<DataManager>();
 
 var app = builder.Build();
 
