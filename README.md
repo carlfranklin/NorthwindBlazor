@@ -168,8 +168,9 @@ Do this for all the methods that retrieve data in the DataManager.
 
 Do NOT create separate partial classes. Keep all methods in the DataManager class.
 
-Ensure that there are no duplicate methods
-Add the DataManager as a service in Program.cs
+Ensure that there are no duplicate methods.
+
+Add the DataManager as a service in Program.cs.
 
 Make sure it builds
 ```
@@ -390,7 +391,11 @@ The agent "completed" work several times. Each time I refreshed the branch in Vi
 
 <img src="images/image-20250616190654347.png" alt="image-20250616190654347" style="zoom:8	0%;" />
 
-As I went through the app and tested it. These are the comments that I added. When the agent was done, I refreshed the branch to test:
+As I went through the app and tested it. When the agent was done, I refreshed the branch to test it.
+
+> Your experience will most likely be different from mine here. The main part of the application is done. Now I'm just looking for bugs and improvements. Of course, I could have gone on and on, but I merged the PR once it was all basically working.
+
+These are the comments that I added during the final phase:
 
 ```
 I'm getting errors loading all models on all forms. For example: "Error in GetAllCategories: Connection string keyword 'version' is not supported. For a possible alternative, see https://go.microsoft.com/fwlink/?linkid=2142181." Also, there is no Orders page. Please implement.
@@ -401,4 +406,12 @@ Please remove the Regions.razor page from the UI and also the related methods fr
 ```
 
 After the Agent addressed all of these, I had a real working application!
+
+## What's Next?
+
+You are only limited by your imagination. These prompts and issue descriptions just came out of my head. There is no official syntax or grammar requirements. Just explain what you want in plain English and be as detailed as you can. If a PR doesn't do what you wanted it to, close the issue and try again.
+
+In the future, we will probably see a plethora of prompt libraries tuned by specialists to help you in even more ways than you can imagine. Stay tuned!
+
+
 
