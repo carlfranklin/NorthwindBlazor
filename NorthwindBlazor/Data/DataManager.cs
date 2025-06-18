@@ -2812,5 +2812,609 @@ public class DataManager
 
     #endregion
 
+    #region CurrentProductList Methods
+
+    public ReturnListType<CurrentProductList> GetAllCurrentProductLists()
+    {
+        try
+        {
+            var products = new List<CurrentProductList>();
+            using var connection = GetConnection();
+            connection.Open();
+            
+            const string sql = @"
+                SELECT ProductID, ProductName
+                FROM [Current Product List]";
+            
+            using var command = new SqliteCommand(sql, connection);
+            using var reader = command.ExecuteReader();
+            
+            while (reader.Read())
+            {
+                products.Add(new CurrentProductList
+                {
+                    ProductId = reader.IsDBNull("ProductID") ? null : reader.GetInt32("ProductID"),
+                    ProductName = reader.IsDBNull("ProductName") ? null : reader.GetString("ProductName")
+                });
+            }
+            
+            return new ReturnListType<CurrentProductList>(true, products);
+        }
+        catch (Exception ex)
+        {
+            return HandleListError<CurrentProductList>(ex, "GetAllCurrentProductLists");
+        }
+    }
+
+    public ReturnType<CurrentProductList> GetCurrentProductListById(int productId)
+    {
+        try
+        {
+            using var connection = GetConnection();
+            connection.Open();
+            
+            const string sql = @"
+                SELECT ProductID, ProductName
+                FROM [Current Product List]
+                WHERE ProductID = @productId";
+            
+            using var command = new SqliteCommand(sql, connection);
+            command.Parameters.AddWithValue("@productId", productId);
+            using var reader = command.ExecuteReader();
+            
+            if (reader.Read())
+            {
+                var product = new CurrentProductList
+                {
+                    ProductId = reader.IsDBNull("ProductID") ? null : reader.GetInt32("ProductID"),
+                    ProductName = reader.IsDBNull("ProductName") ? null : reader.GetString("ProductName")
+                };
+                
+                return new ReturnType<CurrentProductList>(true, product);
+            }
+            
+            return new ReturnType<CurrentProductList>(false, null, new List<string> { "Product not found" });
+        }
+        catch (Exception ex)
+        {
+            return HandleError<CurrentProductList>(ex, "GetCurrentProductListById");
+        }
+    }
+
+    // View operations - Update/Delete/Add not supported
+    public ReturnType<CurrentProductList> UpdateCurrentProductList(CurrentProductList currentProductList)
+    {
+        return new ReturnType<CurrentProductList>(false, null, new List<string> { "Update operations not supported for view" });
+    }
+
+    public ReturnType<CurrentProductList> DeleteCurrentProductList(CurrentProductList currentProductList)
+    {
+        return new ReturnType<CurrentProductList>(false, null, new List<string> { "Delete operations not supported for view" });
+    }
+
+    public ReturnType<CurrentProductList> DeleteCurrentProductListById(int productId)
+    {
+        return new ReturnType<CurrentProductList>(false, null, new List<string> { "Delete operations not supported for view" });
+    }
+
+    public ReturnType<CurrentProductList> AddCurrentProductList(CurrentProductList currentProductList)
+    {
+        return new ReturnType<CurrentProductList>(false, null, new List<string> { "Add operations not supported for view" });
+    }
+
+    #endregion
+
+    #region OrdersQry Methods
+
+    public ReturnListType<OrdersQry> GetAllOrdersQrys()
+    {
+        try
+        {
+            var orders = new List<OrdersQry>();
+            using var connection = GetConnection();
+            connection.Open();
+            
+            const string sql = @"
+                SELECT OrderID, CustomerID, EmployeeID, OrderDate, RequiredDate, ShippedDate,
+                       ShipVia, Freight, ShipName, ShipAddress, ShipCity, ShipRegion, 
+                       ShipPostalCode, ShipCountry, CompanyName, Address, City, Region, PostalCode, Country
+                FROM [Orders Qry]";
+            
+            using var command = new SqliteCommand(sql, connection);
+            using var reader = command.ExecuteReader();
+            
+            while (reader.Read())
+            {
+                orders.Add(new OrdersQry
+                {
+                    OrderId = reader.IsDBNull("OrderID") ? null : reader.GetInt32("OrderID"),
+                    CustomerId = reader.IsDBNull("CustomerID") ? null : reader.GetString("CustomerID"),
+                    EmployeeId = reader.IsDBNull("EmployeeID") ? null : reader.GetInt32("EmployeeID"),
+                    OrderDate = reader.IsDBNull("OrderDate") ? null : reader.GetDateTime("OrderDate"),
+                    RequiredDate = reader.IsDBNull("RequiredDate") ? null : reader.GetDateTime("RequiredDate"),
+                    ShippedDate = reader.IsDBNull("ShippedDate") ? null : reader.GetDateTime("ShippedDate"),
+                    ShipVia = reader.IsDBNull("ShipVia") ? null : reader.GetInt32("ShipVia"),
+                    Freight = reader.IsDBNull("Freight") ? null : reader.GetInt32("Freight"),
+                    ShipName = reader.IsDBNull("ShipName") ? null : reader.GetString("ShipName"),
+                    ShipAddress = reader.IsDBNull("ShipAddress") ? null : reader.GetString("ShipAddress"),
+                    ShipCity = reader.IsDBNull("ShipCity") ? null : reader.GetString("ShipCity"),
+                    ShipRegion = reader.IsDBNull("ShipRegion") ? null : reader.GetString("ShipRegion"),
+                    ShipPostalCode = reader.IsDBNull("ShipPostalCode") ? null : reader.GetString("ShipPostalCode"),
+                    ShipCountry = reader.IsDBNull("ShipCountry") ? null : reader.GetString("ShipCountry"),
+                    CompanyName = reader.IsDBNull("CompanyName") ? null : reader.GetString("CompanyName"),
+                    Address = reader.IsDBNull("Address") ? null : reader.GetString("Address"),
+                    City = reader.IsDBNull("City") ? null : reader.GetString("City"),
+                    Region = reader.IsDBNull("Region") ? null : reader.GetString("Region"),
+                    PostalCode = reader.IsDBNull("PostalCode") ? null : reader.GetString("PostalCode"),
+                    Country = reader.IsDBNull("Country") ? null : reader.GetString("Country")
+                });
+            }
+            
+            return new ReturnListType<OrdersQry>(true, orders);
+        }
+        catch (Exception ex)
+        {
+            return HandleListError<OrdersQry>(ex, "GetAllOrdersQrys");
+        }
+    }
+
+    public ReturnType<OrdersQry> GetOrdersQryById(int orderId)
+    {
+        try
+        {
+            using var connection = GetConnection();
+            connection.Open();
+            
+            const string sql = @"
+                SELECT OrderID, CustomerID, EmployeeID, OrderDate, RequiredDate, ShippedDate,
+                       ShipVia, Freight, ShipName, ShipAddress, ShipCity, ShipRegion, 
+                       ShipPostalCode, ShipCountry, CompanyName, Address, City, Region, PostalCode, Country
+                FROM [Orders Qry]
+                WHERE OrderID = @orderId";
+            
+            using var command = new SqliteCommand(sql, connection);
+            command.Parameters.AddWithValue("@orderId", orderId);
+            using var reader = command.ExecuteReader();
+            
+            if (reader.Read())
+            {
+                var order = new OrdersQry
+                {
+                    OrderId = reader.IsDBNull("OrderID") ? null : reader.GetInt32("OrderID"),
+                    CustomerId = reader.IsDBNull("CustomerID") ? null : reader.GetString("CustomerID"),
+                    EmployeeId = reader.IsDBNull("EmployeeID") ? null : reader.GetInt32("EmployeeID"),
+                    OrderDate = reader.IsDBNull("OrderDate") ? null : reader.GetDateTime("OrderDate"),
+                    RequiredDate = reader.IsDBNull("RequiredDate") ? null : reader.GetDateTime("RequiredDate"),
+                    ShippedDate = reader.IsDBNull("ShippedDate") ? null : reader.GetDateTime("ShippedDate"),
+                    ShipVia = reader.IsDBNull("ShipVia") ? null : reader.GetInt32("ShipVia"),
+                    Freight = reader.IsDBNull("Freight") ? null : reader.GetInt32("Freight"),
+                    ShipName = reader.IsDBNull("ShipName") ? null : reader.GetString("ShipName"),
+                    ShipAddress = reader.IsDBNull("ShipAddress") ? null : reader.GetString("ShipAddress"),
+                    ShipCity = reader.IsDBNull("ShipCity") ? null : reader.GetString("ShipCity"),
+                    ShipRegion = reader.IsDBNull("ShipRegion") ? null : reader.GetString("ShipRegion"),
+                    ShipPostalCode = reader.IsDBNull("ShipPostalCode") ? null : reader.GetString("ShipPostalCode"),
+                    ShipCountry = reader.IsDBNull("ShipCountry") ? null : reader.GetString("ShipCountry"),
+                    CompanyName = reader.IsDBNull("CompanyName") ? null : reader.GetString("CompanyName"),
+                    Address = reader.IsDBNull("Address") ? null : reader.GetString("Address"),
+                    City = reader.IsDBNull("City") ? null : reader.GetString("City"),
+                    Region = reader.IsDBNull("Region") ? null : reader.GetString("Region"),
+                    PostalCode = reader.IsDBNull("PostalCode") ? null : reader.GetString("PostalCode"),
+                    Country = reader.IsDBNull("Country") ? null : reader.GetString("Country")
+                };
+                
+                return new ReturnType<OrdersQry>(true, order);
+            }
+            
+            return new ReturnType<OrdersQry>(false, null, new List<string> { "Order not found" });
+        }
+        catch (Exception ex)
+        {
+            return HandleError<OrdersQry>(ex, "GetOrdersQryById");
+        }
+    }
+
+    // View operations - Update/Delete/Add not supported
+    public ReturnType<OrdersQry> UpdateOrdersQry(OrdersQry ordersQry)
+    {
+        return new ReturnType<OrdersQry>(false, null, new List<string> { "Update operations not supported for view" });
+    }
+
+    public ReturnType<OrdersQry> DeleteOrdersQry(OrdersQry ordersQry)
+    {
+        return new ReturnType<OrdersQry>(false, null, new List<string> { "Delete operations not supported for view" });
+    }
+
+    public ReturnType<OrdersQry> DeleteOrdersQryById(int orderId)
+    {
+        return new ReturnType<OrdersQry>(false, null, new List<string> { "Delete operations not supported for view" });
+    }
+
+    public ReturnType<OrdersQry> AddOrdersQry(OrdersQry ordersQry)
+    {
+        return new ReturnType<OrdersQry>(false, null, new List<string> { "Add operations not supported for view" });
+    }
+
+    #endregion
+
+    #region ProductsByCategory Methods
+
+    public ReturnListType<ProductsByCategory> GetAllProductsByCategorys()
+    {
+        try
+        {
+            var products = new List<ProductsByCategory>();
+            using var connection = GetConnection();
+            connection.Open();
+            
+            const string sql = @"
+                SELECT CategoryName, ProductName, QuantityPerUnit, UnitsInStock, Discontinued
+                FROM [Products by Category]";
+            
+            using var command = new SqliteCommand(sql, connection);
+            using var reader = command.ExecuteReader();
+            
+            while (reader.Read())
+            {
+                products.Add(new ProductsByCategory
+                {
+                    CategoryName = reader.IsDBNull("CategoryName") ? null : reader.GetString("CategoryName"),
+                    ProductName = reader.IsDBNull("ProductName") ? null : reader.GetString("ProductName"),
+                    QuantityPerUnit = reader.IsDBNull("QuantityPerUnit") ? null : reader.GetString("QuantityPerUnit"),
+                    UnitsInStock = reader.IsDBNull("UnitsInStock") ? null : reader.GetInt32("UnitsInStock"),
+                    Discontinued = reader.IsDBNull("Discontinued") ? null : reader.GetString("Discontinued")
+                });
+            }
+            
+            return new ReturnListType<ProductsByCategory>(true, products);
+        }
+        catch (Exception ex)
+        {
+            return HandleListError<ProductsByCategory>(ex, "GetAllProductsByCategorys");
+        }
+    }
+
+    public ReturnType<ProductsByCategory> GetProductsByCategoryById(string categoryName, string productName)
+    {
+        try
+        {
+            using var connection = GetConnection();
+            connection.Open();
+            
+            const string sql = @"
+                SELECT CategoryName, ProductName, QuantityPerUnit, UnitsInStock, Discontinued
+                FROM [Products by Category]
+                WHERE CategoryName = @categoryName AND ProductName = @productName";
+            
+            using var command = new SqliteCommand(sql, connection);
+            command.Parameters.AddWithValue("@categoryName", categoryName);
+            command.Parameters.AddWithValue("@productName", productName);
+            using var reader = command.ExecuteReader();
+            
+            if (reader.Read())
+            {
+                var product = new ProductsByCategory
+                {
+                    CategoryName = reader.IsDBNull("CategoryName") ? null : reader.GetString("CategoryName"),
+                    ProductName = reader.IsDBNull("ProductName") ? null : reader.GetString("ProductName"),
+                    QuantityPerUnit = reader.IsDBNull("QuantityPerUnit") ? null : reader.GetString("QuantityPerUnit"),
+                    UnitsInStock = reader.IsDBNull("UnitsInStock") ? null : reader.GetInt32("UnitsInStock"),
+                    Discontinued = reader.IsDBNull("Discontinued") ? null : reader.GetString("Discontinued")
+                };
+                
+                return new ReturnType<ProductsByCategory>(true, product);
+            }
+            
+            return new ReturnType<ProductsByCategory>(false, null, new List<string> { "Product not found" });
+        }
+        catch (Exception ex)
+        {
+            return HandleError<ProductsByCategory>(ex, "GetProductsByCategoryById");
+        }
+    }
+
+    // View operations - Update/Delete/Add not supported
+    public ReturnType<ProductsByCategory> UpdateProductsByCategory(ProductsByCategory productsByCategory)
+    {
+        return new ReturnType<ProductsByCategory>(false, null, new List<string> { "Update operations not supported for view" });
+    }
+
+    public ReturnType<ProductsByCategory> DeleteProductsByCategory(ProductsByCategory productsByCategory)
+    {
+        return new ReturnType<ProductsByCategory>(false, null, new List<string> { "Delete operations not supported for view" });
+    }
+
+    public ReturnType<ProductsByCategory> DeleteProductsByCategoryById(string categoryName, string productName)
+    {
+        return new ReturnType<ProductsByCategory>(false, null, new List<string> { "Delete operations not supported for view" });
+    }
+
+    public ReturnType<ProductsByCategory> AddProductsByCategory(ProductsByCategory productsByCategory)
+    {
+        return new ReturnType<ProductsByCategory>(false, null, new List<string> { "Add operations not supported for view" });
+    }
+
+    #endregion
+
+    #region SalesByCategory Methods
+
+    public ReturnListType<SalesByCategory> GetAllSalesByCategorys()
+    {
+        try
+        {
+            var sales = new List<SalesByCategory>();
+            using var connection = GetConnection();
+            connection.Open();
+            
+            const string sql = @"
+                SELECT CategoryID, CategoryName, ProductName, ProductSales
+                FROM [Sales by Category]";
+            
+            using var command = new SqliteCommand(sql, connection);
+            using var reader = command.ExecuteReader();
+            
+            while (reader.Read())
+            {
+                sales.Add(new SalesByCategory
+                {
+                    CategoryId = reader.IsDBNull("CategoryID") ? null : reader.GetInt32("CategoryID"),
+                    CategoryName = reader.IsDBNull("CategoryName") ? null : reader.GetString("CategoryName"),
+                    ProductName = reader.IsDBNull("ProductName") ? null : reader.GetString("ProductName"),
+                    ProductSales = reader.IsDBNull("ProductSales") ? null : (byte[])reader["ProductSales"]
+                });
+            }
+            
+            return new ReturnListType<SalesByCategory>(true, sales);
+        }
+        catch (Exception ex)
+        {
+            return HandleListError<SalesByCategory>(ex, "GetAllSalesByCategorys");
+        }
+    }
+
+    public ReturnType<SalesByCategory> GetSalesByCategoryById(int categoryId, string productName)
+    {
+        try
+        {
+            using var connection = GetConnection();
+            connection.Open();
+            
+            const string sql = @"
+                SELECT CategoryID, CategoryName, ProductName, ProductSales
+                FROM [Sales by Category]
+                WHERE CategoryID = @categoryId AND ProductName = @productName";
+            
+            using var command = new SqliteCommand(sql, connection);
+            command.Parameters.AddWithValue("@categoryId", categoryId);
+            command.Parameters.AddWithValue("@productName", productName);
+            using var reader = command.ExecuteReader();
+            
+            if (reader.Read())
+            {
+                var sale = new SalesByCategory
+                {
+                    CategoryId = reader.IsDBNull("CategoryID") ? null : reader.GetInt32("CategoryID"),
+                    CategoryName = reader.IsDBNull("CategoryName") ? null : reader.GetString("CategoryName"),
+                    ProductName = reader.IsDBNull("ProductName") ? null : reader.GetString("ProductName"),
+                    ProductSales = reader.IsDBNull("ProductSales") ? null : (byte[])reader["ProductSales"]
+                };
+                
+                return new ReturnType<SalesByCategory>(true, sale);
+            }
+            
+            return new ReturnType<SalesByCategory>(false, null, new List<string> { "Sale not found" });
+        }
+        catch (Exception ex)
+        {
+            return HandleError<SalesByCategory>(ex, "GetSalesByCategoryById");
+        }
+    }
+
+    // View operations - Update/Delete/Add not supported
+    public ReturnType<SalesByCategory> UpdateSalesByCategory(SalesByCategory salesByCategory)
+    {
+        return new ReturnType<SalesByCategory>(false, null, new List<string> { "Update operations not supported for view" });
+    }
+
+    public ReturnType<SalesByCategory> DeleteSalesByCategory(SalesByCategory salesByCategory)
+    {
+        return new ReturnType<SalesByCategory>(false, null, new List<string> { "Delete operations not supported for view" });
+    }
+
+    public ReturnType<SalesByCategory> DeleteSalesByCategoryById(int categoryId, string productName)
+    {
+        return new ReturnType<SalesByCategory>(false, null, new List<string> { "Delete operations not supported for view" });
+    }
+
+    public ReturnType<SalesByCategory> AddSalesByCategory(SalesByCategory salesByCategory)
+    {
+        return new ReturnType<SalesByCategory>(false, null, new List<string> { "Add operations not supported for view" });
+    }
+
+    #endregion
+
+    #region CategorySalesFor1997 Methods
+
+    public ReturnListType<CategorySalesFor1997> GetAllCategorySalesFor1997s()
+    {
+        try
+        {
+            var sales = new List<CategorySalesFor1997>();
+            using var connection = GetConnection();
+            connection.Open();
+            
+            const string sql = @"
+                SELECT CategoryName, CategorySales
+                FROM [Category Sales for 1997]";
+            
+            using var command = new SqliteCommand(sql, connection);
+            using var reader = command.ExecuteReader();
+            
+            while (reader.Read())
+            {
+                sales.Add(new CategorySalesFor1997
+                {
+                    CategoryName = reader.IsDBNull("CategoryName") ? null : reader.GetString("CategoryName"),
+                    CategorySales = reader.IsDBNull("CategorySales") ? null : (byte[])reader["CategorySales"]
+                });
+            }
+            
+            return new ReturnListType<CategorySalesFor1997>(true, sales);
+        }
+        catch (Exception ex)
+        {
+            return HandleListError<CategorySalesFor1997>(ex, "GetAllCategorySalesFor1997s");
+        }
+    }
+
+    public ReturnType<CategorySalesFor1997> GetCategorySalesFor1997ById(string categoryName)
+    {
+        try
+        {
+            using var connection = GetConnection();
+            connection.Open();
+            
+            const string sql = @"
+                SELECT CategoryName, CategorySales
+                FROM [Category Sales for 1997]
+                WHERE CategoryName = @categoryName";
+            
+            using var command = new SqliteCommand(sql, connection);
+            command.Parameters.AddWithValue("@categoryName", categoryName);
+            using var reader = command.ExecuteReader();
+            
+            if (reader.Read())
+            {
+                var sale = new CategorySalesFor1997
+                {
+                    CategoryName = reader.IsDBNull("CategoryName") ? null : reader.GetString("CategoryName"),
+                    CategorySales = reader.IsDBNull("CategorySales") ? null : (byte[])reader["CategorySales"]
+                };
+                
+                return new ReturnType<CategorySalesFor1997>(true, sale);
+            }
+            
+            return new ReturnType<CategorySalesFor1997>(false, null, new List<string> { "CategorySales not found" });
+        }
+        catch (Exception ex)
+        {
+            return HandleError<CategorySalesFor1997>(ex, "GetCategorySalesFor1997ById");
+        }
+    }
+
+    // View operations - Update/Delete/Add not supported
+    public ReturnType<CategorySalesFor1997> UpdateCategorySalesFor1997(CategorySalesFor1997 categorySalesFor1997)
+    {
+        return new ReturnType<CategorySalesFor1997>(false, null, new List<string> { "Update operations not supported for view" });
+    }
+
+    public ReturnType<CategorySalesFor1997> DeleteCategorySalesFor1997(CategorySalesFor1997 categorySalesFor1997)
+    {
+        return new ReturnType<CategorySalesFor1997>(false, null, new List<string> { "Delete operations not supported for view" });
+    }
+
+    public ReturnType<CategorySalesFor1997> DeleteCategorySalesFor1997ById(string categoryName)
+    {
+        return new ReturnType<CategorySalesFor1997>(false, null, new List<string> { "Delete operations not supported for view" });
+    }
+
+    public ReturnType<CategorySalesFor1997> AddCategorySalesFor1997(CategorySalesFor1997 categorySalesFor1997)
+    {
+        return new ReturnType<CategorySalesFor1997>(false, null, new List<string> { "Add operations not supported for view" });
+    }
+
+    #endregion
+
+    #region OrderSubtotal Methods
+
+    public ReturnListType<OrderSubtotal> GetAllOrderSubtotals()
+    {
+        try
+        {
+            var subtotals = new List<OrderSubtotal>();
+            using var connection = GetConnection();
+            connection.Open();
+            
+            const string sql = @"
+                SELECT OrderID, Subtotal
+                FROM [Order Subtotals]";
+            
+            using var command = new SqliteCommand(sql, connection);
+            using var reader = command.ExecuteReader();
+            
+            while (reader.Read())
+            {
+                subtotals.Add(new OrderSubtotal
+                {
+                    OrderId = reader.IsDBNull("OrderID") ? null : reader.GetInt32("OrderID"),
+                    Subtotal = reader.IsDBNull("Subtotal") ? null : reader.GetDouble("Subtotal")
+                });
+            }
+            
+            return new ReturnListType<OrderSubtotal>(true, subtotals);
+        }
+        catch (Exception ex)
+        {
+            return HandleListError<OrderSubtotal>(ex, "GetAllOrderSubtotals");
+        }
+    }
+
+    public ReturnType<OrderSubtotal> GetOrderSubtotalById(int orderId)
+    {
+        try
+        {
+            using var connection = GetConnection();
+            connection.Open();
+            
+            const string sql = @"
+                SELECT OrderID, Subtotal
+                FROM [Order Subtotals]
+                WHERE OrderID = @orderId";
+            
+            using var command = new SqliteCommand(sql, connection);
+            command.Parameters.AddWithValue("@orderId", orderId);
+            using var reader = command.ExecuteReader();
+            
+            if (reader.Read())
+            {
+                var subtotal = new OrderSubtotal
+                {
+                    OrderId = reader.IsDBNull("OrderID") ? null : reader.GetInt32("OrderID"),
+                    Subtotal = reader.IsDBNull("Subtotal") ? null : reader.GetDouble("Subtotal")
+                };
+                
+                return new ReturnType<OrderSubtotal>(true, subtotal);
+            }
+            
+            return new ReturnType<OrderSubtotal>(false, null, new List<string> { "OrderSubtotal not found" });
+        }
+        catch (Exception ex)
+        {
+            return HandleError<OrderSubtotal>(ex, "GetOrderSubtotalById");
+        }
+    }
+
+    // View operations - Update/Delete/Add not supported
+    public ReturnType<OrderSubtotal> UpdateOrderSubtotal(OrderSubtotal orderSubtotal)
+    {
+        return new ReturnType<OrderSubtotal>(false, null, new List<string> { "Update operations not supported for view" });
+    }
+
+    public ReturnType<OrderSubtotal> DeleteOrderSubtotal(OrderSubtotal orderSubtotal)
+    {
+        return new ReturnType<OrderSubtotal>(false, null, new List<string> { "Delete operations not supported for view" });
+    }
+
+    public ReturnType<OrderSubtotal> DeleteOrderSubtotalById(int orderId)
+    {
+        return new ReturnType<OrderSubtotal>(false, null, new List<string> { "Delete operations not supported for view" });
+    }
+
+    public ReturnType<OrderSubtotal> AddOrderSubtotal(OrderSubtotal orderSubtotal)
+    {
+        return new ReturnType<OrderSubtotal>(false, null, new List<string> { "Add operations not supported for view" });
+    }
+
+    #endregion
+
     #endregion
 }
