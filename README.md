@@ -243,11 +243,11 @@ Check out the *\Data\DataManager.cs* class. Here's just the top:
 using System;
 using System.Collections.Generic;
 using System.Data;
-using System.Linq;
 using Microsoft.Data.Sqlite;
-using NorthwindBlazor2.Models;
+using NorthwindBlazor.Models;
+using Microsoft.Extensions.Configuration;
 
-namespace NorthwindBlazor2.Data;
+namespace NorthwindBlazor.Data;
 
 public class DataManager
 {
@@ -256,16 +256,19 @@ public class DataManager
     public DataManager(IConfiguration configuration)
     {
         _connectionString = configuration.GetConnectionString("NorthwindConnection") 
-            ?? throw new ArgumentNullException(nameof(configuration), "NorthwindConnection not found in configuration");
+            ?? throw new ArgumentNullException(nameof(configuration), "Connection string 'NorthwindConnection' not found");
     }
 
-    private ReturnType<T> HandleException<T>(Exception ex)
+    #region Helper Methods
+
+    private SqliteConnection GetConnection()
     {
-        return new ReturnType<T>
-        {
-            Success = false,
-            ErrorMessages = { ex.Message }
-        };
+        return new SqliteConnection(_connectionString);
+    }
+
+    private ReturnType<T> HandleError<T>(Exception ex, string operation)
+    {
+        return new ReturnType<T>(false, default(T), new List<string> { $"Error in {operation}: {ex.Message}" });
     }
 ...
 ```
