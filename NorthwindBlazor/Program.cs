@@ -1,3 +1,4 @@
+using Blazored.Modal;
 using NorthwindBlazor.Components;
 using NorthwindBlazor.Data;
 
@@ -9,6 +10,7 @@ builder.Services.AddRazorComponents()
 
 // Add DataManager service
 builder.Services.AddScoped<DataManager>();
+builder.Services.AddBlazoredModal();
 
 var app = builder.Build();
 
