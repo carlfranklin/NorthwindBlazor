@@ -1,0 +1,270 @@
+@page "/categories"
+@using NorthwindBlazor.Models
+@using NorthwindBlazor.Data
+@inject DataManager DataManager
+@inject IJSRuntime JS
+
+<PageTitle>Categories</PageTitle>
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <h3>Categories</h3>
+        </div>
+    </div>
+    
+    <div class="row">
+        <!-- List Panel -->
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Category List</h5>
+                    <div class="row">
+                        <div class="col-md-8">
+                            <InstantInputText @bind-Value="filterText" @bind-Value:event="oninput" @onkeyup="OnFilterTextChanged" class="form-control" placeholder="Filter categories..." />
+                        </div>
+                        <div class="col-md-4">
+                            <button class="btn btn-primary w-100" @onclick="AddNew">Add New</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body p-0" style="max-height: 70vh; overflow-y: auto;">
+                    <div class="list-group list-group-flush">
+                        <Virtualize Items="filteredCategories" Context="category">
+                            <div class="list-group-item list-group-item-action @(selectedCategory?.CategoryId == category.CategoryId ? "selected-item" : "")" 
+                                 @onclick="() => SelectCategory(category)" style="cursor: pointer;">
+                                <div class="d-flex w-100 justify-content-between">
+                                    <h6 class="mb-1">@category.CategoryName</h6>
+                                </div>
+                                <p class="mb-1">@category.Description</p>
+                            </div>
+                        </Virtualize>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Edit Panel -->
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5>@(selectedCategory?.CategoryId == 0 ? "Add New Category" : "Edit Category")</h5>
+                </div>
+                <div class="card-body">
+                    @if (selectedCategory != null)
+                    {
+                        <EditForm Model="selectedCategory" OnValidSubmit="SaveCategory">
+                            <DataAnnotationsValidator />
+                            <ValidationSummary class="alert alert-danger" />
+                            
+                            <div class="mb-3">
+                                <label for="categoryName" class="form-label">Category Name</label>
+                                <InstantInputText id="categoryName" @bind-Value="selectedCategory.CategoryName" class="form-control" />
+                                <ValidationMessage For="() => selectedCategory.CategoryName" />
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="description" class="form-label">Description</label>
+                                <InputTextArea id="description" @bind-Value="selectedCategory.Description" class="form-control" rows="3" />
+                                <ValidationMessage For="() => selectedCategory.Description" />
+                            </div>
+                            
+                            <div class="d-flex gap-2">
+                                <button type="submit" class="btn btn-success">
+                                    @(selectedCategory.CategoryId == 0 ? "Add" : "Update")
+                                </button>
+                                @if (selectedCategory.CategoryId != 0)
+                                {
+                                    <button type="button" class="btn btn-danger" @onclick="DeleteCategory">Delete</button>
+                                }
+                                <button type="button" class="btn btn-secondary" @onclick="ClearSelection">Clear</button>
+                            </div>
+                        </EditForm>
+                    }
+                    else
+                    {
+                        <p class="text-muted">Select a category to edit or click "Add New" to create one.</p>
+                    }
+                </div>
+            </div>
+            
+            @if (!string.IsNullOrEmpty(errorMessage))
+            {
+                <div class="alert alert-warning alert-dismissible fade show mt-3" role="alert">
+                    <strong>Notice:</strong> @errorMessage
+                    @if (showErrorDetails && errorDetails.Any())
+                    {
+                        <hr />
+                        <ul class="mb-0">
+                            @foreach (var error in errorDetails)
+                            {
+                                <li>@error</li>
+                            }
+                        </ul>
+                    }
+                    <button type="button" class="btn-close" @onclick="ClearError"></button>
+                    @if (errorDetails.Any() && !showErrorDetails)
+                    {
+                        <br />
+                        <button type="button" class="btn btn-sm btn-outline-secondary mt-2" @onclick="ToggleErrorDetails">Show Details</button>
+                    }
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<style>
+    .selected-item {
+        background-color: #f8f9fa !important;
+    }
+</style>
+
+@code {
+    private List<Category> categories = new();
+    private List<Category> filteredCategories = new();
+    private Category? selectedCategory;
+    private string filterText = "";
+    private string errorMessage = "";
+    private List<string> errorDetails = new();
+    private bool showErrorDetails = false;
+
+    protected override Task OnInitializedAsync()
+    {
+        return LoadCategories();
+    }
+
+    private void OnFilterTextChanged()
+    {
+        ApplyFilter();
+        StateHasChanged();
+    }
+
+
+
+    private void ApplyFilter()
+    {
+        if (string.IsNullOrEmpty(filterText))
+        {
+            filteredCategories = categories.ToList();
+        }
+        else
+        {
+            var filter = filterText.ToLower();
+            filteredCategories = categories.Where(c => 
+                (c.CategoryName?.ToLower().Contains(filter) == true) ||
+                (c.Description?.ToLower().Contains(filter) == true)
+            ).ToList();
+        }
+    }
+
+    private Task LoadCategories()
+    {
+        var result = DataManager.GetAllCategories();
+        if (result.Success)
+        {
+            categories = result.Data;
+            ApplyFilter();
+        }
+        else
+        {
+            ShowError("Failed to load categories", result.ErrorMessages);
+        }
+        return Task.CompletedTask;
+    }
+
+    private void SelectCategory(Category category)
+    {
+        selectedCategory = new Category
+        {
+            CategoryId = category.CategoryId,
+            CategoryName = category.CategoryName,
+            Description = category.Description,
+            Picture = category.Picture
+        };
+        ClearError();
+    }
+
+    private void AddNew()
+    {
+        selectedCategory = new Category { CategoryId = 0 };
+        ClearError();
+    }
+
+    private Task SaveCategory()
+    {
+        if (selectedCategory == null) return Task.CompletedTask;
+
+        ReturnType<Category> result;
+        
+        if (selectedCategory.CategoryId == 0)
+        {
+            result = DataManager.AddCategory(selectedCategory);
+        }
+        else
+        {
+            result = DataManager.UpdateCategory(selectedCategory);
+        }
+
+        if (result.Success)
+        {
+            LoadCategories();
+            if (selectedCategory.CategoryId == 0 && result.Data != null)
+            {
+                selectedCategory = result.Data;
+            }
+            ClearError();
+        }
+        else
+        {
+            ShowError($"Failed to {(selectedCategory.CategoryId == 0 ? "add" : "update")} category", result.ErrorMessages);
+        }
+        
+        return Task.CompletedTask;
+    }
+
+    private async Task DeleteCategory()
+    {
+        if (selectedCategory == null || selectedCategory.CategoryId == 0) return;
+
+        if (await JS.InvokeAsync<bool>("confirm", $"Are you sure you want to delete '{selectedCategory.CategoryName}'?"))
+        {
+            var result = DataManager.DeleteCategory(selectedCategory);
+            if (result.Success)
+            {
+                LoadCategories();
+                selectedCategory = null;
+                ClearError();
+            }
+            else
+            {
+                ShowError("Failed to delete category", result.ErrorMessages);
+            }
+        }
+    }
+
+    private void ClearSelection()
+    {
+        selectedCategory = null;
+        ClearError();
+    }
+
+    private void ShowError(string message, List<string> details)
+    {
+        errorMessage = message;
+        errorDetails = details ?? new List<string>();
+        showErrorDetails = false;
+    }
+
+    private void ClearError()
+    {
+        errorMessage = "";
+        errorDetails.Clear();
+        showErrorDetails = false;
+    }
+
+    private void ToggleErrorDetails()
+    {
+        showErrorDetails = !showErrorDetails;
+    }
+}
