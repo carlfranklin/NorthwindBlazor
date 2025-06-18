@@ -1,0 +1,272 @@
+@page "/invoices"
+@using NorthwindBlazor.Models
+@using NorthwindBlazor.Data
+@inject DataManager DataManager
+
+<PageTitle>Invoices (Read-Only)</PageTitle>
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <h3>Invoices <small class="text-muted">(View Only)</small></h3>
+            <div class="alert alert-info">
+                <i class="bi bi-info-circle"></i> This is a read-only view. Invoice data cannot be modified as it represents computed results from orders and order details.
+            </div>
+        </div>
+    </div>
+    
+    <div class="row">
+        <!-- List Panel -->
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Invoice List</h5>
+                    <div class="row">
+                        <div class="col-md-12">
+                            <InstantInputText @bind-Value="filterText" @bind-Value:event="oninput" @onkeyup="OnFilterTextChanged" class="form-control" placeholder="Filter invoices..." />
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body p-0" style="max-height: 70vh; overflow-y: auto;">
+                    <div class="list-group list-group-flush">
+                        <Virtualize Items="filteredInvoices" Context="invoice">
+                            <div class="list-group-item list-group-item-action @(selectedInvoice?.OrderId == invoice.OrderId && selectedInvoice?.ProductId == invoice.ProductId ? "selected-item" : "")" 
+                                 @onclick="() => SelectInvoice(invoice)" style="cursor: pointer;">
+                                <div class="d-flex w-100 justify-content-between">
+                                    <h6 class="mb-1">Order #@invoice.OrderId - @invoice.ProductName</h6>
+                                    <small>$@(invoice.ExtendedPrice?.ToString("F2") ?? "0.00")</small>
+                                </div>
+                                <p class="mb-1">@invoice.CustomerName</p>
+                                <small>@invoice.OrderDate?.ToString("MM/dd/yyyy") - Qty: @invoice.Quantity</small>
+                            </div>
+                        </Virtualize>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Details Panel -->
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Invoice Details</h5>
+                </div>
+                <div class="card-body">
+                    @if (selectedInvoice != null)
+                    {
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Order ID</label>
+                                <input type="text" class="form-control" value="@selectedInvoice.OrderId" readonly />
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Product ID</label>
+                                <input type="text" class="form-control" value="@selectedInvoice.ProductId" readonly />
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Product Name</label>
+                            <input type="text" class="form-control" value="@selectedInvoice.ProductName" readonly />
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Customer</label>
+                            <input type="text" class="form-control" value="@selectedInvoice.CustomerName" readonly />
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Order Date</label>
+                                <input type="text" class="form-control" value="@selectedInvoice.OrderDate?.ToString("MM/dd/yyyy")" readonly />
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Shipped Date</label>
+                                <input type="text" class="form-control" value="@selectedInvoice.ShippedDate?.ToString("MM/dd/yyyy")" readonly />
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Unit Price</label>
+                                <input type="text" class="form-control" value="$@(selectedInvoice.UnitPrice?.ToString("F2") ?? "0.00")" readonly />
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Quantity</label>
+                                <input type="text" class="form-control" value="@selectedInvoice.Quantity" readonly />
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Discount</label>
+                                <input type="text" class="form-control" value="@((selectedInvoice.Discount ?? 0) * 100)%" readonly />
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Extended Price</label>
+                                <input type="text" class="form-control fw-bold" value="$@(selectedInvoice.ExtendedPrice?.ToString("F2") ?? "0.00")" readonly />
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Freight</label>
+                                <input type="text" class="form-control" value="$@(selectedInvoice.Freight?.ToString("F2") ?? "0.00")" readonly />
+                            </div>
+                        </div>
+                        
+                        <h6>Shipping Address</h6>
+                        <div class="mb-3">
+                            <label class="form-label">Ship Name</label>
+                            <input type="text" class="form-control" value="@selectedInvoice.ShipName" readonly />
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Ship Address</label>
+                            <input type="text" class="form-control" value="@selectedInvoice.ShipAddress" readonly />
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Ship City</label>
+                                <input type="text" class="form-control" value="@selectedInvoice.ShipCity" readonly />
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Ship Region</label>
+                                <input type="text" class="form-control" value="@selectedInvoice.ShipRegion" readonly />
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Ship Postal Code</label>
+                                <input type="text" class="form-control" value="@selectedInvoice.ShipPostalCode" readonly />
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Ship Country</label>
+                            <input type="text" class="form-control" value="@selectedInvoice.ShipCountry" readonly />
+                        </div>
+                        
+                        <button type="button" class="btn btn-secondary" @onclick="ClearSelection">Clear</button>
+                    }
+                    else
+                    {
+                        <p class="text-muted">Select an invoice to view details.</p>
+                    }
+                </div>
+            </div>
+            
+            @if (!string.IsNullOrEmpty(errorMessage))
+            {
+                <div class="alert alert-warning alert-dismissible fade show mt-3" role="alert">
+                    <strong>Notice:</strong> @errorMessage
+                    @if (showErrorDetails && errorDetails.Any())
+                    {
+                        <hr />
+                        <ul class="mb-0">
+                            @foreach (var error in errorDetails)
+                            {
+                                <li>@error</li>
+                            }
+                        </ul>
+                    }
+                    <button type="button" class="btn-close" @onclick="ClearError"></button>
+                    @if (errorDetails.Any() && !showErrorDetails)
+                    {
+                        <br />
+                        <button type="button" class="btn btn-sm btn-outline-secondary mt-2" @onclick="ToggleErrorDetails">Show Details</button>
+                    }
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<style>
+    .selected-item {
+        background-color: #f8f9fa !important;
+    }
+</style>
+
+@code {
+    private List<Invoice> invoices = new();
+    private List<Invoice> filteredInvoices = new();
+    private Invoice? selectedInvoice;
+    private string filterText = "";
+    private string errorMessage = "";
+    private List<string> errorDetails = new();
+    private bool showErrorDetails = false;
+
+    protected override Task OnInitializedAsync()
+    {
+        return LoadInvoices();
+    }
+
+    private void OnFilterTextChanged()
+    {
+        ApplyFilter();
+        StateHasChanged();
+    }
+
+    private void ApplyFilter()
+    {
+        if (string.IsNullOrEmpty(filterText))
+        {
+            filteredInvoices = invoices.ToList();
+        }
+        else
+        {
+            var filter = filterText.ToLower();
+            filteredInvoices = invoices.Where(i => 
+                (i.ProductName?.ToLower().Contains(filter) == true) ||
+                (i.CustomerName?.ToLower().Contains(filter) == true) ||
+                (i.ShipName?.ToLower().Contains(filter) == true) ||
+                (i.ShipCity?.ToLower().Contains(filter) == true) ||
+                (i.ShipCountry?.ToLower().Contains(filter) == true) ||
+                (i.OrderId?.ToString().Contains(filter) == true)
+            ).ToList();
+        }
+    }
+
+    private Task LoadInvoices()
+    {
+        var result = DataManager.GetAllInvoices();
+        if (result.Success)
+        {
+            invoices = result.Data;
+            ApplyFilter();
+        }
+        else
+        {
+            ShowError("Failed to load invoices", result.ErrorMessages);
+        }
+        return Task.CompletedTask;
+    }
+
+    private void SelectInvoice(Invoice invoice)
+    {
+        selectedInvoice = invoice; // Read-only, so no need to clone
+        ClearError();
+    }
+
+    private void ClearSelection()
+    {
+        selectedInvoice = null;
+        ClearError();
+    }
+
+    private void ShowError(string message, List<string> details)
+    {
+        errorMessage = message;
+        errorDetails = details ?? new List<string>();
+        showErrorDetails = false;
+    }
+
+    private void ClearError()
+    {
+        errorMessage = "";
+        errorDetails.Clear();
+        showErrorDetails = false;
+    }
+
+    private void ToggleErrorDetails()
+    {
+        showErrorDetails = !showErrorDetails;
+    }
+}
