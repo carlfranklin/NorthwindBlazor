@@ -43,19 +43,32 @@ Update *appsettings.json* with your connection string:
 }
 ```
 
-Add the following NuGet packages:
+Add the following NuGet packages with these commands in the Visual Studio **Package Manager Console**:
 
-```xml
+```ps
 Install-Package Microsoft.EntityFrameworkCore.Sqlite
 Install-Package Microsoft.EntityFrameworkCore.Tools
+```
+
+You can use the following statements at the console if you don't have Visual Studio:
+
+```bash
+dotnet package add Microsoft.EntityFrameworkCore.Sqlite
+dotnet package add Microsoft.EntityFrameworkCore.Tools
 ```
 
 Build the project.
 
 Scaffold the models to a Models folder by issuing this command in the **Package Manager Console**:
 
-```
+```ps
 Scaffold-DbContext "Data Source=northwind.db" Microsoft.EntityFrameworkCore.Sqlite -OutputDir Models
+```
+
+You can use these equivalent commands at the console instead:
+
+```bash
+dotnet ef dbcontext scaffold "Data Source=northwind.db" Microsoft.EntityFrameworkCore.Sqlite --output-dir Models
 ```
 
 Once it's done:
