@@ -38,7 +38,7 @@ Update *appsettings.json* with your connection string:
   },
   "AllowedHosts": "*",
   "ConnectionStrings": {
-    "NorthwindConnection": "Data Source=northwind.db;Version=3;"
+    "NorthwindConnection": "Data Source=northwind.db;"
   }
 }
 ```
@@ -114,6 +114,9 @@ This is a Blazor Web application that lets the user manage the Northwind databas
 - Check for null values in both incoming models and database results.
 - Use try/catch exception handling around all database operations.
 
+## Code Generation Policies
+- Never create multiple partial classes. Always generate one file per class.
+
 ## Blazor EditForm Policies
 - Use the EditForm component for all forms.
 - Include validation attributes in the model classes for data annotations.
@@ -179,7 +182,7 @@ Use the most efficient single SQL query to return data rather than executing mul
 
 Do this for all the methods that retrieve data in the DataManager.
 
-Do NOT create separate partial classes. Keep all methods in the DataManager class.
+Do NOT create separate partial classes. Keep all methods in a single DataManager class.
 
 Ensure that there are no duplicate methods.
 
@@ -188,11 +191,7 @@ Add the DataManager as a service in Program.cs.
 Make sure it builds
 ```
 
-After creating, assign the issue to yourself.
-
-![image-20250617195125881](images/image-20250617195125881.png)
-
-Now assign it to Copilot.
+After creating, assign the issue to yourself and Copilot.
 
 ![image-20250617195242286](images/image-20250617195242286.png)
 
@@ -204,13 +203,11 @@ It will take some time. Watch for the agent to create a checklist and then start
 
 ![image-20250616162759110](images/image-20250616162759110.png)
 
-Note that the last item in the list is **Test the implementation**. Now, since the database is local, the agent can't do end-to-end testing. That's ok. We will test it locally.
-
 Once it has finished, you will get an email like this:
 
 ![image-20250616163109522](images/image-20250616163109522.png)
 
-If you look at the PR, you'll see that Copilot has only finished some of the work. It seems to be breaking up the work into multiple PRs.
+If you look at the PR, you may see that Copilot has only finished some of the work. In this case it is breaking up the work into multiple PRs.
 
 ![image-20250616163240185](images/image-20250616163240185.png)
 
@@ -218,7 +215,17 @@ Let's wait until all of the work is complete.
 
 ![image-20250616165633162](images/image-20250616165633162.png)
 
-Now click the **Ready for review** button.
+The next step is to select the branch in Visual Studio so you can check out the code before merging.
+
+> If a PR doesn't do what you wanted it to, either provide a comment so the Agent can fix the problem, or close the issue and try again. 
+>
+> I have had situations where, even though I told the Agent not to use multiple files with partial classes, it created them anyway. 
+>
+> On another pass, no OrderDetails were returned from GetAllOrders(). I had to add the comment: "GetAllOrders() does not return OrderDetails. Please fix." Copilot fixed it.
+>
+> Since LLMs are non-deterministic, you can't depend on it producing the same results every time. 
+
+Once you are ready to merge, click the **Ready for review** button.
 
 Observe the changes in the PR, and merge it by clicking the **Merge pull request** button:
 
@@ -233,77 +240,37 @@ Now pull the latest into your project and test it out.
 Check out the *\Data\DataManager.cs* class. Here's just the top:
 
 ```c#
+using System;
+using System.Collections.Generic;
 using System.Data;
-using Microsoft.Data.SqlClient;
-using NorthwindBlazor.Models;
+using System.Linq;
+using Microsoft.Data.Sqlite;
+using NorthwindBlazor2.Models;
 
-namespace NorthwindBlazor.Data;
+namespace NorthwindBlazor2.Data;
 
 public class DataManager
 {
     private readonly string _connectionString;
 
-    public DataManager(string connectionString)
+    public DataManager(IConfiguration configuration)
     {
-        _connectionString = connectionString;
+        _connectionString = configuration.GetConnectionString("NorthwindConnection") 
+            ?? throw new ArgumentNullException(nameof(configuration), "NorthwindConnection not found in configuration");
     }
 
-    #region Category Methods
-
-    public ReturnListType<Category> GetAllCategories()
+    private ReturnType<T> HandleException<T>(Exception ex)
     {
-        var result = new ReturnListType<Category>();
-        
-        try
+        return new ReturnType<T>
         {
-            using var connection = new SqlConnection(_connectionString);
-            connection.Open();
-            
-            var sql = "SELECT CategoryID, CategoryName, Description, Picture FROM Categories";
-            using var command = new SqlCommand(sql, connection);
-            using var reader = command.ExecuteReader();
-            
-            while (reader.Read())
-            {
-                var category = new Category
-                {
-                    CategoryId = reader.GetInt32("CategoryID"),
-                    CategoryName = reader.IsDBNull("CategoryName") ? string.Empty : reader.GetString("CategoryName"),
-                    Description = reader.IsDBNull("Description") ? null : reader.GetString("Description"),
-                    Picture = reader.IsDBNull("Picture") ? null : (byte[])reader["Picture"]
-                };
-                
-                result.Data.Add(category);
-            }
-            
-            reader.Close();
-            
-            // Populate Products collection for each category
-            foreach (var category in result.Data)
-            {
-                var productsResult = GetProductsByCategoryId(category.CategoryId);
-                if (productsResult.Success)
-                {
-                    category.Products = productsResult.Data;
-                }
-            }
-            
-            result.Success = true;
-        }
-        catch (Exception ex)
-        {
-            result.Success = false;
-            result.ErrorMessages.Add($"Error retrieving categories: {ex.Message}");
-        }
-        
-        return result;
+            Success = false,
+            ErrorMessages = { ex.Message }
+        };
     }
 ...
 ```
 
-This is exactly the way I would use ADO.NET to access a SQL database.
-
-We are now ready to create Blazor pages!
+We are now ready to create Blazor pages! 
 
 ### Configure UI for Blazor pages
 
