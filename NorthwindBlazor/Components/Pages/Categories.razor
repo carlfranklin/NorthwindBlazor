@@ -208,7 +208,7 @@
 
         if (result.Success)
         {
-            LoadCategories();
+            _ = LoadCategories();
             if (selectedCategory.CategoryId == 0 && result.Data != null)
             {
                 selectedCategory = result.Data;
@@ -232,7 +232,7 @@
             var result = DataManager.DeleteCategory(selectedCategory);
             if (result.Success)
             {
-                LoadCategories();
+                _ = LoadCategories();
                 selectedCategory = null;
                 ClearError();
             }
