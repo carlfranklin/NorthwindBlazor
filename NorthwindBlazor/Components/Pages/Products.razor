@@ -1,0 +1,391 @@
+@page "/products"
+@using NorthwindBlazor.Models
+@using NorthwindBlazor.Data
+@inject DataManager DataManager
+@inject IJSRuntime JS
+
+<PageTitle>Products</PageTitle>
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <h3>Products</h3>
+        </div>
+    </div>
+    
+    <div class="row">
+        <!-- List Panel -->
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Product List</h5>
+                    <div class="row">
+                        <div class="col-md-8">
+                            <InstantInputText @bind-Value="filterText" @bind-Value:event="oninput" @onkeyup="OnFilterTextChanged" class="form-control" placeholder="Filter products..." />
+                        </div>
+                        <div class="col-md-4">
+                            <button class="btn btn-primary w-100" @onclick="AddNew">Add New</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body p-0" style="max-height: 70vh; overflow-y: auto;">
+                    <div class="list-group list-group-flush">
+                        <Virtualize Items="filteredProducts" Context="product">
+                            <div class="list-group-item list-group-item-action @(selectedProduct?.ProductId == product.ProductId ? "selected-item" : "")" 
+                                 @onclick="() => SelectProduct(product)" style="cursor: pointer;">
+                                <div class="d-flex w-100 justify-content-between">
+                                    <h6 class="mb-1">@product.ProductName</h6>
+                                    <small>$@(product.UnitPrice?.ToString("F2") ?? "N/A")</small>
+                                </div>
+                                <p class="mb-1">@GetCategoryName(product.CategoryId) - @GetSupplierName(product.SupplierId)</p>
+                                <small>@product.QuantityPerUnit @(product.Discontinued == "1" ? " - DISCONTINUED" : "")</small>
+                            </div>
+                        </Virtualize>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Edit Panel -->
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5>@(selectedProduct?.ProductId == 0 ? "Add New Product" : "Edit Product")</h5>
+                </div>
+                <div class="card-body">
+                    @if (selectedProduct != null)
+                    {
+                        <EditForm Model="selectedProduct" OnValidSubmit="SaveProduct">
+                            <DataAnnotationsValidator />
+                            <ValidationSummary class="alert alert-danger" />
+                            
+                            <div class="mb-3">
+                                <label for="productName" class="form-label">Product Name</label>
+                                <InstantInputText id="productName" @bind-Value="selectedProduct.ProductName" class="form-control" />
+                                <ValidationMessage For="() => selectedProduct.ProductName" />
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="categoryId" class="form-label">Category</label>
+                                    <InputSelect id="categoryId" @bind-Value="selectedProduct.CategoryId" class="form-select">
+                                        <option value="">-- Select Category --</option>
+                                        @foreach (var category in categories)
+                                        {
+                                            <option value="@category.CategoryId">@category.CategoryName</option>
+                                        }
+                                    </InputSelect>
+                                    <ValidationMessage For="() => selectedProduct.CategoryId" />
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="supplierId" class="form-label">Supplier</label>
+                                    <InputSelect id="supplierId" @bind-Value="selectedProduct.SupplierId" class="form-select">
+                                        <option value="">-- Select Supplier --</option>
+                                        @foreach (var supplier in suppliers)
+                                        {
+                                            <option value="@supplier.SupplierId">@supplier.CompanyName</option>
+                                        }
+                                    </InputSelect>
+                                    <ValidationMessage For="() => selectedProduct.SupplierId" />
+                                </div>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="quantityPerUnit" class="form-label">Quantity Per Unit</label>
+                                    <InstantInputText id="quantityPerUnit" @bind-Value="selectedProduct.QuantityPerUnit" class="form-control" />
+                                    <ValidationMessage For="() => selectedProduct.QuantityPerUnit" />
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="unitPrice" class="form-label">Unit Price</label>
+                                    <InputNumber id="unitPrice" @bind-Value="selectedProduct.UnitPrice" class="form-control" step="0.01" />
+                                    <ValidationMessage For="() => selectedProduct.UnitPrice" />
+                                </div>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-4 mb-3">
+                                    <label for="unitsInStock" class="form-label">Units In Stock</label>
+                                    <InputNumber id="unitsInStock" @bind-Value="selectedProduct.UnitsInStock" class="form-control" />
+                                    <ValidationMessage For="() => selectedProduct.UnitsInStock" />
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label for="unitsOnOrder" class="form-label">Units On Order</label>
+                                    <InputNumber id="unitsOnOrder" @bind-Value="selectedProduct.UnitsOnOrder" class="form-control" />
+                                    <ValidationMessage For="() => selectedProduct.UnitsOnOrder" />
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label for="reorderLevel" class="form-label">Reorder Level</label>
+                                    <InputNumber id="reorderLevel" @bind-Value="selectedProduct.ReorderLevel" class="form-control" />
+                                    <ValidationMessage For="() => selectedProduct.ReorderLevel" />
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <div class="form-check">
+                                    <InputCheckbox id="discontinued" @bind-Value="isDiscontinued" class="form-check-input" />
+                                    <label class="form-check-label" for="discontinued">
+                                        Discontinued
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            <div class="d-flex gap-2">
+                                <button type="submit" class="btn btn-success">
+                                    @(selectedProduct.ProductId == 0 ? "Add" : "Update")
+                                </button>
+                                @if (selectedProduct.ProductId != 0)
+                                {
+                                    <button type="button" class="btn btn-danger" @onclick="DeleteProduct">Delete</button>
+                                }
+                                <button type="button" class="btn btn-secondary" @onclick="ClearSelection">Clear</button>
+                            </div>
+                        </EditForm>
+                    }
+                    else
+                    {
+                        <p class="text-muted">Select a product to edit or click "Add New" to create one.</p>
+                    }
+                </div>
+            </div>
+            
+            @if (!string.IsNullOrEmpty(errorMessage))
+            {
+                <div class="alert alert-warning alert-dismissible fade show mt-3" role="alert">
+                    <strong>Notice:</strong> @errorMessage
+                    @if (showErrorDetails && errorDetails.Any())
+                    {
+                        <hr />
+                        <ul class="mb-0">
+                            @foreach (var error in errorDetails)
+                            {
+                                <li>@error</li>
+                            }
+                        </ul>
+                    }
+                    <button type="button" class="btn-close" @onclick="ClearError"></button>
+                    @if (errorDetails.Any() && !showErrorDetails)
+                    {
+                        <br />
+                        <button type="button" class="btn btn-sm btn-outline-secondary mt-2" @onclick="ToggleErrorDetails">Show Details</button>
+                    }
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<style>
+    .selected-item {
+        background-color: #f8f9fa !important;
+    }
+</style>
+
+@code {
+    private List<Product> products = new();
+    private List<Product> filteredProducts = new();
+    private List<Category> categories = new();
+    private List<Supplier> suppliers = new();
+    private Product? selectedProduct;
+    private string filterText = "";
+    private string errorMessage = "";
+    private List<string> errorDetails = new();
+    private bool showErrorDetails = false;
+    
+    private bool isDiscontinued
+    {
+        get => selectedProduct?.Discontinued == "1";
+        set => selectedProduct!.Discontinued = value ? "1" : "0";
+    }
+
+    protected override Task OnInitializedAsync()
+    {
+        LoadProducts();
+        LoadCategories();
+        LoadSuppliers();
+        return Task.CompletedTask;
+    }
+
+    private void OnFilterTextChanged()
+    {
+        ApplyFilter();
+        StateHasChanged();
+    }
+
+    private void ApplyFilter()
+    {
+        if (string.IsNullOrEmpty(filterText))
+        {
+            filteredProducts = products.ToList();
+        }
+        else
+        {
+            var filter = filterText.ToLower();
+            filteredProducts = products.Where(p => 
+                (p.ProductName?.ToLower().Contains(filter) == true) ||
+                (p.QuantityPerUnit?.ToLower().Contains(filter) == true) ||
+                GetCategoryName(p.CategoryId)?.ToLower().Contains(filter) == true ||
+                GetSupplierName(p.SupplierId)?.ToLower().Contains(filter) == true
+            ).ToList();
+        }
+    }
+
+    private Task LoadProducts()
+    {
+        var result = DataManager.GetAllProducts();
+        if (result.Success)
+        {
+            products = result.Data;
+            ApplyFilter();
+        }
+        else
+        {
+            ShowError("Failed to load products", result.ErrorMessages);
+        }
+        return Task.CompletedTask;
+    }
+
+    private Task LoadCategories()
+    {
+        var result = DataManager.GetAllCategories();
+        if (result.Success)
+        {
+            categories = result.Data;
+        }
+        else
+        {
+            ShowError("Failed to load categories", result.ErrorMessages);
+        }
+        return Task.CompletedTask;
+    }
+
+    private Task LoadSuppliers()
+    {
+        var result = DataManager.GetAllSuppliers();
+        if (result.Success)
+        {
+            suppliers = result.Data;
+        }
+        else
+        {
+            ShowError("Failed to load suppliers", result.ErrorMessages);
+        }
+        return Task.CompletedTask;
+    }
+
+    private string? GetCategoryName(int? categoryId)
+    {
+        return categories.FirstOrDefault(c => c.CategoryId == categoryId)?.CategoryName ?? "No Category";
+    }
+
+    private string? GetSupplierName(int? supplierId)
+    {
+        return suppliers.FirstOrDefault(s => s.SupplierId == supplierId)?.CompanyName ?? "No Supplier";
+    }
+
+    private void SelectProduct(Product product)
+    {
+        selectedProduct = new Product
+        {
+            ProductId = product.ProductId,
+            ProductName = product.ProductName,
+            SupplierId = product.SupplierId,
+            CategoryId = product.CategoryId,
+            QuantityPerUnit = product.QuantityPerUnit,
+            UnitPrice = product.UnitPrice,
+            UnitsInStock = product.UnitsInStock,
+            UnitsOnOrder = product.UnitsOnOrder,
+            ReorderLevel = product.ReorderLevel,
+            Discontinued = product.Discontinued
+        };
+        ClearError();
+    }
+
+    private void AddNew()
+    {
+        selectedProduct = new Product 
+        { 
+            ProductId = 0,
+            ProductName = "",
+            Discontinued = "0"
+        };
+        ClearError();
+    }
+
+    private Task SaveProduct()
+    {
+        if (selectedProduct == null) return Task.CompletedTask;
+
+        ReturnType<Product> result;
+        
+        if (selectedProduct.ProductId == 0)
+        {
+            result = DataManager.AddProduct(selectedProduct);
+        }
+        else
+        {
+            result = DataManager.UpdateProduct(selectedProduct);
+        }
+
+        if (result.Success)
+        {
+            _ = LoadProducts();
+            if (selectedProduct.ProductId == 0 && result.Data != null)
+            {
+                selectedProduct = result.Data;
+            }
+            ClearError();
+        }
+        else
+        {
+            ShowError($"Failed to {(selectedProduct.ProductId == 0 ? "add" : "update")} product", result.ErrorMessages);
+        }
+        
+        return Task.CompletedTask;
+    }
+
+    private async Task DeleteProduct()
+    {
+        if (selectedProduct == null || selectedProduct.ProductId == 0) return;
+
+        if (await JS.InvokeAsync<bool>("confirm", $"Are you sure you want to delete '{selectedProduct.ProductName}'?"))
+        {
+            var result = DataManager.DeleteProduct(selectedProduct);
+            if (result.Success)
+            {
+                _ = LoadProducts();
+                selectedProduct = null;
+                ClearError();
+            }
+            else
+            {
+                ShowError("Failed to delete product", result.ErrorMessages);
+            }
+        }
+    }
+
+    private void ClearSelection()
+    {
+        selectedProduct = null;
+        ClearError();
+    }
+
+    private void ShowError(string message, List<string> details)
+    {
+        errorMessage = message;
+        errorDetails = details ?? new List<string>();
+        showErrorDetails = false;
+    }
+
+    private void ClearError()
+    {
+        errorMessage = "";
+        errorDetails.Clear();
+        showErrorDetails = false;
+    }
+
+    private void ToggleErrorDetails()
+    {
+        showErrorDetails = !showErrorDetails;
+    }
+}
