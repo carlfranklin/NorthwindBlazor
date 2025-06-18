@@ -1,0 +1,393 @@
+@page "/employees"
+@using NorthwindBlazor.Models
+@using NorthwindBlazor.Data
+@inject DataManager DataManager
+@inject IJSRuntime JS
+
+<PageTitle>Employees</PageTitle>
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <h3>Employees</h3>
+        </div>
+    </div>
+    
+    <div class="row">
+        <!-- List Panel -->
+        <div class="col-md-5">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Employee List</h5>
+                    <div class="row">
+                        <div class="col-md-8">
+                            <InstantInputText @bind-Value="filterText" @bind-Value:event="oninput" @onkeyup="OnFilterTextChanged" class="form-control" placeholder="Filter employees..." />
+                        </div>
+                        <div class="col-md-4">
+                            <button class="btn btn-primary w-100" @onclick="AddNew">Add New</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body p-0" style="max-height: 70vh; overflow-y: auto;">
+                    <div class="list-group list-group-flush">
+                        <Virtualize Items="filteredEmployees" Context="employee">
+                            <div class="list-group-item list-group-item-action @(selectedEmployee?.EmployeeId == employee.EmployeeId ? "selected-item" : "")" 
+                                 @onclick="() => SelectEmployee(employee)" style="cursor: pointer;">
+                                <div class="d-flex w-100 justify-content-between">
+                                    <h6 class="mb-1">@employee.FirstName @employee.LastName</h6>
+                                </div>
+                                <p class="mb-1">@employee.Title</p>
+                                <small>@employee.City, @employee.Country</small>
+                            </div>
+                        </Virtualize>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Edit Panel -->
+        <div class="col-md-7">
+            <div class="card">
+                <div class="card-header">
+                    <h5>@(selectedEmployee?.EmployeeId == 0 ? "Add New Employee" : "Edit Employee")</h5>
+                </div>
+                <div class="card-body" style="max-height: 70vh; overflow-y: auto;">
+                    @if (selectedEmployee != null)
+                    {
+                        <EditForm Model="selectedEmployee" OnValidSubmit="SaveEmployee">
+                            <DataAnnotationsValidator />
+                            <ValidationSummary class="alert alert-danger" />
+                            
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="firstName" class="form-label">First Name</label>
+                                    <InstantInputText id="firstName" @bind-Value="selectedEmployee.FirstName" class="form-control" />
+                                    <ValidationMessage For="() => selectedEmployee.FirstName" />
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="lastName" class="form-label">Last Name</label>
+                                    <InstantInputText id="lastName" @bind-Value="selectedEmployee.LastName" class="form-control" />
+                                    <ValidationMessage For="() => selectedEmployee.LastName" />
+                                </div>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="title" class="form-label">Title</label>
+                                    <InstantInputText id="title" @bind-Value="selectedEmployee.Title" class="form-control" />
+                                    <ValidationMessage For="() => selectedEmployee.Title" />
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="titleOfCourtesy" class="form-label">Title of Courtesy</label>
+                                    <InstantInputText id="titleOfCourtesy" @bind-Value="selectedEmployee.TitleOfCourtesy" class="form-control" />
+                                    <ValidationMessage For="() => selectedEmployee.TitleOfCourtesy" />
+                                </div>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="birthDate" class="form-label">Birth Date</label>
+                                    <InputDate id="birthDate" @bind-Value="birthDate" class="form-control" />
+                                    <ValidationMessage For="() => selectedEmployee.BirthDate" />
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="hireDate" class="form-label">Hire Date</label>
+                                    <InputDate id="hireDate" @bind-Value="hireDate" class="form-control" />
+                                    <ValidationMessage For="() => selectedEmployee.HireDate" />
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="address" class="form-label">Address</label>
+                                <InstantInputText id="address" @bind-Value="selectedEmployee.Address" class="form-control" />
+                                <ValidationMessage For="() => selectedEmployee.Address" />
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-4 mb-3">
+                                    <label for="city" class="form-label">City</label>
+                                    <InstantInputText id="city" @bind-Value="selectedEmployee.City" class="form-control" />
+                                    <ValidationMessage For="() => selectedEmployee.City" />
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label for="region" class="form-label">Region</label>
+                                    <InstantInputText id="region" @bind-Value="selectedEmployee.Region" class="form-control" />
+                                    <ValidationMessage For="() => selectedEmployee.Region" />
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label for="postalCode" class="form-label">Postal Code</label>
+                                    <InstantInputText id="postalCode" @bind-Value="selectedEmployee.PostalCode" class="form-control" />
+                                    <ValidationMessage For="() => selectedEmployee.PostalCode" />
+                                </div>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-4 mb-3">
+                                    <label for="country" class="form-label">Country</label>
+                                    <InstantInputText id="country" @bind-Value="selectedEmployee.Country" class="form-control" />
+                                    <ValidationMessage For="() => selectedEmployee.Country" />
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label for="homePhone" class="form-label">Home Phone</label>
+                                    <InstantInputText id="homePhone" @bind-Value="selectedEmployee.HomePhone" class="form-control" />
+                                    <ValidationMessage For="() => selectedEmployee.HomePhone" />
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label for="extension" class="form-label">Extension</label>
+                                    <InstantInputText id="extension" @bind-Value="selectedEmployee.Extension" class="form-control" />
+                                    <ValidationMessage For="() => selectedEmployee.Extension" />
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="reportsTo" class="form-label">Reports To</label>
+                                <InputSelect id="reportsTo" @bind-Value="selectedEmployee.ReportsTo" class="form-select">
+                                    <option value="">-- No Manager --</option>
+                                    @foreach (var emp in allEmployees.Where(e => e.EmployeeId != selectedEmployee.EmployeeId))
+                                    {
+                                        <option value="@emp.EmployeeId">@emp.FirstName @emp.LastName</option>
+                                    }
+                                </InputSelect>
+                                <ValidationMessage For="() => selectedEmployee.ReportsTo" />
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="photoPath" class="form-label">Photo Path</label>
+                                <InstantInputText id="photoPath" @bind-Value="selectedEmployee.PhotoPath" class="form-control" />
+                                <ValidationMessage For="() => selectedEmployee.PhotoPath" />
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="notes" class="form-label">Notes</label>
+                                <InputTextArea id="notes" @bind-Value="selectedEmployee.Notes" class="form-control" rows="4" />
+                                <ValidationMessage For="() => selectedEmployee.Notes" />
+                            </div>
+                            
+                            <div class="d-flex gap-2">
+                                <button type="submit" class="btn btn-success">
+                                    @(selectedEmployee.EmployeeId == 0 ? "Add" : "Update")
+                                </button>
+                                @if (selectedEmployee.EmployeeId != 0)
+                                {
+                                    <button type="button" class="btn btn-danger" @onclick="DeleteEmployee">Delete</button>
+                                }
+                                <button type="button" class="btn btn-secondary" @onclick="ClearSelection">Clear</button>
+                            </div>
+                        </EditForm>
+                    }
+                    else
+                    {
+                        <p class="text-muted">Select an employee to edit or click "Add New" to create one.</p>
+                    }
+                </div>
+            </div>
+            
+            @if (!string.IsNullOrEmpty(errorMessage))
+            {
+                <div class="alert alert-warning alert-dismissible fade show mt-3" role="alert">
+                    <strong>Notice:</strong> @errorMessage
+                    @if (showErrorDetails && errorDetails.Any())
+                    {
+                        <hr />
+                        <ul class="mb-0">
+                            @foreach (var error in errorDetails)
+                            {
+                                <li>@error</li>
+                            }
+                        </ul>
+                    }
+                    <button type="button" class="btn-close" @onclick="ClearError"></button>
+                    @if (errorDetails.Any() && !showErrorDetails)
+                    {
+                        <br />
+                        <button type="button" class="btn btn-sm btn-outline-secondary mt-2" @onclick="ToggleErrorDetails">Show Details</button>
+                    }
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<style>
+    .selected-item {
+        background-color: #f8f9fa !important;
+    }
+</style>
+
+@code {
+    private List<Employee> employees = new();
+    private List<Employee> allEmployees = new();
+    private List<Employee> filteredEmployees = new();
+    private Employee? selectedEmployee;
+    private string filterText = "";
+    private string errorMessage = "";
+    private List<string> errorDetails = new();
+    private bool showErrorDetails = false;
+
+    private DateTime? birthDate
+    {
+        get => selectedEmployee?.BirthDate?.ToDateTime(TimeOnly.MinValue);
+        set => selectedEmployee!.BirthDate = value.HasValue ? DateOnly.FromDateTime(value.Value) : null;
+    }
+
+    private DateTime? hireDate
+    {
+        get => selectedEmployee?.HireDate?.ToDateTime(TimeOnly.MinValue);
+        set => selectedEmployee!.HireDate = value.HasValue ? DateOnly.FromDateTime(value.Value) : null;
+    }
+
+    protected override Task OnInitializedAsync()
+    {
+        return LoadEmployees();
+    }
+
+    private void OnFilterTextChanged()
+    {
+        ApplyFilter();
+        StateHasChanged();
+    }
+
+    private void ApplyFilter()
+    {
+        if (string.IsNullOrEmpty(filterText))
+        {
+            filteredEmployees = employees.ToList();
+        }
+        else
+        {
+            var filter = filterText.ToLower();
+            filteredEmployees = employees.Where(e => 
+                (e.FirstName?.ToLower().Contains(filter) == true) ||
+                (e.LastName?.ToLower().Contains(filter) == true) ||
+                (e.Title?.ToLower().Contains(filter) == true) ||
+                (e.City?.ToLower().Contains(filter) == true) ||
+                (e.Country?.ToLower().Contains(filter) == true)
+            ).ToList();
+        }
+    }
+
+    private Task LoadEmployees()
+    {
+        var result = DataManager.GetAllEmployees();
+        if (result.Success)
+        {
+            employees = result.Data;
+            allEmployees = result.Data; // Keep a copy for the Reports To dropdown
+            ApplyFilter();
+        }
+        else
+        {
+            ShowError("Failed to load employees", result.ErrorMessages);
+        }
+        return Task.CompletedTask;
+    }
+
+    private void SelectEmployee(Employee employee)
+    {
+        selectedEmployee = new Employee
+        {
+            EmployeeId = employee.EmployeeId,
+            FirstName = employee.FirstName,
+            LastName = employee.LastName,
+            Title = employee.Title,
+            TitleOfCourtesy = employee.TitleOfCourtesy,
+            BirthDate = employee.BirthDate,
+            HireDate = employee.HireDate,
+            Address = employee.Address,
+            City = employee.City,
+            Region = employee.Region,
+            PostalCode = employee.PostalCode,
+            Country = employee.Country,
+            HomePhone = employee.HomePhone,
+            Extension = employee.Extension,
+            Notes = employee.Notes,
+            ReportsTo = employee.ReportsTo,
+            PhotoPath = employee.PhotoPath,
+            Photo = employee.Photo
+        };
+        ClearError();
+    }
+
+    private void AddNew()
+    {
+        selectedEmployee = new Employee { EmployeeId = 0 };
+        ClearError();
+    }
+
+    private Task SaveEmployee()
+    {
+        if (selectedEmployee == null) return Task.CompletedTask;
+
+        ReturnType<Employee> result;
+        
+        if (selectedEmployee.EmployeeId == 0)
+        {
+            result = DataManager.AddEmployee(selectedEmployee);
+        }
+        else
+        {
+            result = DataManager.UpdateEmployee(selectedEmployee);
+        }
+
+        if (result.Success)
+        {
+            _ = LoadEmployees();
+            if (selectedEmployee.EmployeeId == 0 && result.Data != null)
+            {
+                selectedEmployee = result.Data;
+            }
+            ClearError();
+        }
+        else
+        {
+            ShowError($"Failed to {(selectedEmployee.EmployeeId == 0 ? "add" : "update")} employee", result.ErrorMessages);
+        }
+        
+        return Task.CompletedTask;
+    }
+
+    private async Task DeleteEmployee()
+    {
+        if (selectedEmployee == null || selectedEmployee.EmployeeId == 0) return;
+
+        if (await JS.InvokeAsync<bool>("confirm", $"Are you sure you want to delete '{selectedEmployee.FirstName} {selectedEmployee.LastName}'?"))
+        {
+            var result = DataManager.DeleteEmployee(selectedEmployee);
+            if (result.Success)
+            {
+                _ = LoadEmployees();
+                selectedEmployee = null;
+                ClearError();
+            }
+            else
+            {
+                ShowError("Failed to delete employee", result.ErrorMessages);
+            }
+        }
+    }
+
+    private void ClearSelection()
+    {
+        selectedEmployee = null;
+        ClearError();
+    }
+
+    private void ShowError(string message, List<string> details)
+    {
+        errorMessage = message;
+        errorDetails = details ?? new List<string>();
+        showErrorDetails = false;
+    }
+
+    private void ClearError()
+    {
+        errorMessage = "";
+        errorDetails.Clear();
+        showErrorDetails = false;
+    }
+
+    private void ToggleErrorDetails()
+    {
+        showErrorDetails = !showErrorDetails;
+    }
+}

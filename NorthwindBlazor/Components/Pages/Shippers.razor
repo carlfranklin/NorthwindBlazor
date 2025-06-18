@@ -1,0 +1,267 @@
+@page "/shippers"
+@using NorthwindBlazor.Models
+@using NorthwindBlazor.Data
+@inject DataManager DataManager
+@inject IJSRuntime JS
+
+<PageTitle>Shippers</PageTitle>
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <h3>Shippers</h3>
+        </div>
+    </div>
+    
+    <div class="row">
+        <!-- List Panel -->
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Shipper List</h5>
+                    <div class="row">
+                        <div class="col-md-8">
+                            <InstantInputText @bind-Value="filterText" @bind-Value:event="oninput" @onkeyup="OnFilterTextChanged" class="form-control" placeholder="Filter shippers..." />
+                        </div>
+                        <div class="col-md-4">
+                            <button class="btn btn-primary w-100" @onclick="AddNew">Add New</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body p-0" style="max-height: 70vh; overflow-y: auto;">
+                    <div class="list-group list-group-flush">
+                        <Virtualize Items="filteredShippers" Context="shipper">
+                            <div class="list-group-item list-group-item-action @(selectedShipper?.ShipperId == shipper.ShipperId ? "selected-item" : "")" 
+                                 @onclick="() => SelectShipper(shipper)" style="cursor: pointer;">
+                                <div class="d-flex w-100 justify-content-between">
+                                    <h6 class="mb-1">@shipper.CompanyName</h6>
+                                </div>
+                                <p class="mb-1">@shipper.Phone</p>
+                            </div>
+                        </Virtualize>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Edit Panel -->
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5>@(selectedShipper?.ShipperId == 0 ? "Add New Shipper" : "Edit Shipper")</h5>
+                </div>
+                <div class="card-body">
+                    @if (selectedShipper != null)
+                    {
+                        <EditForm Model="selectedShipper" OnValidSubmit="SaveShipper">
+                            <DataAnnotationsValidator />
+                            <ValidationSummary class="alert alert-danger" />
+                            
+                            <div class="mb-3">
+                                <label for="companyName" class="form-label">Company Name</label>
+                                <InstantInputText id="companyName" @bind-Value="selectedShipper.CompanyName" class="form-control" />
+                                <ValidationMessage For="() => selectedShipper.CompanyName" />
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="phone" class="form-label">Phone</label>
+                                <InstantInputText id="phone" @bind-Value="selectedShipper.Phone" class="form-control" />
+                                <ValidationMessage For="() => selectedShipper.Phone" />
+                            </div>
+                            
+                            <div class="d-flex gap-2">
+                                <button type="submit" class="btn btn-success">
+                                    @(selectedShipper.ShipperId == 0 ? "Add" : "Update")
+                                </button>
+                                @if (selectedShipper.ShipperId != 0)
+                                {
+                                    <button type="button" class="btn btn-danger" @onclick="DeleteShipper">Delete</button>
+                                }
+                                <button type="button" class="btn btn-secondary" @onclick="ClearSelection">Clear</button>
+                            </div>
+                        </EditForm>
+                    }
+                    else
+                    {
+                        <p class="text-muted">Select a shipper to edit or click "Add New" to create one.</p>
+                    }
+                </div>
+            </div>
+            
+            @if (!string.IsNullOrEmpty(errorMessage))
+            {
+                <div class="alert alert-warning alert-dismissible fade show mt-3" role="alert">
+                    <strong>Notice:</strong> @errorMessage
+                    @if (showErrorDetails && errorDetails.Any())
+                    {
+                        <hr />
+                        <ul class="mb-0">
+                            @foreach (var error in errorDetails)
+                            {
+                                <li>@error</li>
+                            }
+                        </ul>
+                    }
+                    <button type="button" class="btn-close" @onclick="ClearError"></button>
+                    @if (errorDetails.Any() && !showErrorDetails)
+                    {
+                        <br />
+                        <button type="button" class="btn btn-sm btn-outline-secondary mt-2" @onclick="ToggleErrorDetails">Show Details</button>
+                    }
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<style>
+    .selected-item {
+        background-color: #f8f9fa !important;
+    }
+</style>
+
+@code {
+    private List<Shipper> shippers = new();
+    private List<Shipper> filteredShippers = new();
+    private Shipper? selectedShipper;
+    private string filterText = "";
+    private string errorMessage = "";
+    private List<string> errorDetails = new();
+    private bool showErrorDetails = false;
+
+    protected override Task OnInitializedAsync()
+    {
+        return LoadShippers();
+    }
+
+    private void OnFilterTextChanged()
+    {
+        ApplyFilter();
+        StateHasChanged();
+    }
+
+    private void ApplyFilter()
+    {
+        if (string.IsNullOrEmpty(filterText))
+        {
+            filteredShippers = shippers.ToList();
+        }
+        else
+        {
+            var filter = filterText.ToLower();
+            filteredShippers = shippers.Where(s => 
+                (s.CompanyName?.ToLower().Contains(filter) == true) ||
+                (s.Phone?.ToLower().Contains(filter) == true)
+            ).ToList();
+        }
+    }
+
+    private Task LoadShippers()
+    {
+        var result = DataManager.GetAllShippers();
+        if (result.Success)
+        {
+            shippers = result.Data;
+            ApplyFilter();
+        }
+        else
+        {
+            ShowError("Failed to load shippers", result.ErrorMessages);
+        }
+        return Task.CompletedTask;
+    }
+
+    private void SelectShipper(Shipper shipper)
+    {
+        selectedShipper = new Shipper
+        {
+            ShipperId = shipper.ShipperId,
+            CompanyName = shipper.CompanyName,
+            Phone = shipper.Phone
+        };
+        ClearError();
+    }
+
+    private void AddNew()
+    {
+        selectedShipper = new Shipper { ShipperId = 0, CompanyName = "" };
+        ClearError();
+    }
+
+    private Task SaveShipper()
+    {
+        if (selectedShipper == null) return Task.CompletedTask;
+
+        ReturnType<Shipper> result;
+        
+        if (selectedShipper.ShipperId == 0)
+        {
+            result = DataManager.AddShipper(selectedShipper);
+        }
+        else
+        {
+            result = DataManager.UpdateShipper(selectedShipper);
+        }
+
+        if (result.Success)
+        {
+            _ = LoadShippers();
+            if (selectedShipper.ShipperId == 0 && result.Data != null)
+            {
+                selectedShipper = result.Data;
+            }
+            ClearError();
+        }
+        else
+        {
+            ShowError($"Failed to {(selectedShipper.ShipperId == 0 ? "add" : "update")} shipper", result.ErrorMessages);
+        }
+        
+        return Task.CompletedTask;
+    }
+
+    private async Task DeleteShipper()
+    {
+        if (selectedShipper == null || selectedShipper.ShipperId == 0) return;
+
+        if (await JS.InvokeAsync<bool>("confirm", $"Are you sure you want to delete '{selectedShipper.CompanyName}'?"))
+        {
+            var result = DataManager.DeleteShipper(selectedShipper);
+            if (result.Success)
+            {
+                _ = LoadShippers();
+                selectedShipper = null;
+                ClearError();
+            }
+            else
+            {
+                ShowError("Failed to delete shipper", result.ErrorMessages);
+            }
+        }
+    }
+
+    private void ClearSelection()
+    {
+        selectedShipper = null;
+        ClearError();
+    }
+
+    private void ShowError(string message, List<string> details)
+    {
+        errorMessage = message;
+        errorDetails = details ?? new List<string>();
+        showErrorDetails = false;
+    }
+
+    private void ClearError()
+    {
+        errorMessage = "";
+        errorDetails.Clear();
+        showErrorDetails = false;
+    }
+
+    private void ToggleErrorDetails()
+    {
+        showErrorDetails = !showErrorDetails;
+    }
+}

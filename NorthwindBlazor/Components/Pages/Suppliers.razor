@@ -1,0 +1,335 @@
+@page "/suppliers"
+@using NorthwindBlazor.Models
+@using NorthwindBlazor.Data
+@inject DataManager DataManager
+@inject IJSRuntime JS
+
+<PageTitle>Suppliers</PageTitle>
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <h3>Suppliers</h3>
+        </div>
+    </div>
+    
+    <div class="row">
+        <!-- List Panel -->
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Supplier List</h5>
+                    <div class="row">
+                        <div class="col-md-8">
+                            <InstantInputText @bind-Value="filterText" @bind-Value:event="oninput" @onkeyup="OnFilterTextChanged" class="form-control" placeholder="Filter suppliers..." />
+                        </div>
+                        <div class="col-md-4">
+                            <button class="btn btn-primary w-100" @onclick="AddNew">Add New</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body p-0" style="max-height: 70vh; overflow-y: auto;">
+                    <div class="list-group list-group-flush">
+                        <Virtualize Items="filteredSuppliers" Context="supplier">
+                            <div class="list-group-item list-group-item-action @(selectedSupplier?.SupplierId == supplier.SupplierId ? "selected-item" : "")" 
+                                 @onclick="() => SelectSupplier(supplier)" style="cursor: pointer;">
+                                <div class="d-flex w-100 justify-content-between">
+                                    <h6 class="mb-1">@supplier.CompanyName</h6>
+                                </div>
+                                <p class="mb-1">@supplier.ContactName (@supplier.ContactTitle)</p>
+                                <small>@supplier.City, @supplier.Country</small>
+                            </div>
+                        </Virtualize>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Edit Panel -->
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5>@(selectedSupplier?.SupplierId == 0 ? "Add New Supplier" : "Edit Supplier")</h5>
+                </div>
+                <div class="card-body">
+                    @if (selectedSupplier != null)
+                    {
+                        <EditForm Model="selectedSupplier" OnValidSubmit="SaveSupplier">
+                            <DataAnnotationsValidator />
+                            <ValidationSummary class="alert alert-danger" />
+                            
+                            <div class="mb-3">
+                                <label for="companyName" class="form-label">Company Name</label>
+                                <InstantInputText id="companyName" @bind-Value="selectedSupplier.CompanyName" class="form-control" />
+                                <ValidationMessage For="() => selectedSupplier.CompanyName" />
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="contactName" class="form-label">Contact Name</label>
+                                    <InstantInputText id="contactName" @bind-Value="selectedSupplier.ContactName" class="form-control" />
+                                    <ValidationMessage For="() => selectedSupplier.ContactName" />
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="contactTitle" class="form-label">Contact Title</label>
+                                    <InstantInputText id="contactTitle" @bind-Value="selectedSupplier.ContactTitle" class="form-control" />
+                                    <ValidationMessage For="() => selectedSupplier.ContactTitle" />
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="address" class="form-label">Address</label>
+                                <InstantInputText id="address" @bind-Value="selectedSupplier.Address" class="form-control" />
+                                <ValidationMessage For="() => selectedSupplier.Address" />
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-4 mb-3">
+                                    <label for="city" class="form-label">City</label>
+                                    <InstantInputText id="city" @bind-Value="selectedSupplier.City" class="form-control" />
+                                    <ValidationMessage For="() => selectedSupplier.City" />
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label for="region" class="form-label">Region</label>
+                                    <InstantInputText id="region" @bind-Value="selectedSupplier.Region" class="form-control" />
+                                    <ValidationMessage For="() => selectedSupplier.Region" />
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label for="postalCode" class="form-label">Postal Code</label>
+                                    <InstantInputText id="postalCode" @bind-Value="selectedSupplier.PostalCode" class="form-control" />
+                                    <ValidationMessage For="() => selectedSupplier.PostalCode" />
+                                </div>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-4 mb-3">
+                                    <label for="country" class="form-label">Country</label>
+                                    <InstantInputText id="country" @bind-Value="selectedSupplier.Country" class="form-control" />
+                                    <ValidationMessage For="() => selectedSupplier.Country" />
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label for="phone" class="form-label">Phone</label>
+                                    <InstantInputText id="phone" @bind-Value="selectedSupplier.Phone" class="form-control" />
+                                    <ValidationMessage For="() => selectedSupplier.Phone" />
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label for="fax" class="form-label">Fax</label>
+                                    <InstantInputText id="fax" @bind-Value="selectedSupplier.Fax" class="form-control" />
+                                    <ValidationMessage For="() => selectedSupplier.Fax" />
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="homePage" class="form-label">Home Page</label>
+                                <InstantInputText id="homePage" @bind-Value="selectedSupplier.HomePage" class="form-control" />
+                                <ValidationMessage For="() => selectedSupplier.HomePage" />
+                            </div>
+                            
+                            <div class="d-flex gap-2">
+                                <button type="submit" class="btn btn-success">
+                                    @(selectedSupplier.SupplierId == 0 ? "Add" : "Update")
+                                </button>
+                                @if (selectedSupplier.SupplierId != 0)
+                                {
+                                    <button type="button" class="btn btn-danger" @onclick="DeleteSupplier">Delete</button>
+                                }
+                                <button type="button" class="btn btn-secondary" @onclick="ClearSelection">Clear</button>
+                            </div>
+                        </EditForm>
+                    }
+                    else
+                    {
+                        <p class="text-muted">Select a supplier to edit or click "Add New" to create one.</p>
+                    }
+                </div>
+            </div>
+            
+            @if (!string.IsNullOrEmpty(errorMessage))
+            {
+                <div class="alert alert-warning alert-dismissible fade show mt-3" role="alert">
+                    <strong>Notice:</strong> @errorMessage
+                    @if (showErrorDetails && errorDetails.Any())
+                    {
+                        <hr />
+                        <ul class="mb-0">
+                            @foreach (var error in errorDetails)
+                            {
+                                <li>@error</li>
+                            }
+                        </ul>
+                    }
+                    <button type="button" class="btn-close" @onclick="ClearError"></button>
+                    @if (errorDetails.Any() && !showErrorDetails)
+                    {
+                        <br />
+                        <button type="button" class="btn btn-sm btn-outline-secondary mt-2" @onclick="ToggleErrorDetails">Show Details</button>
+                    }
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<style>
+    .selected-item {
+        background-color: #f8f9fa !important;
+    }
+</style>
+
+@code {
+    private List<Supplier> suppliers = new();
+    private List<Supplier> filteredSuppliers = new();
+    private Supplier? selectedSupplier;
+    private string filterText = "";
+    private string errorMessage = "";
+    private List<string> errorDetails = new();
+    private bool showErrorDetails = false;
+
+    protected override Task OnInitializedAsync()
+    {
+        return LoadSuppliers();
+    }
+
+    private void OnFilterTextChanged()
+    {
+        ApplyFilter();
+        StateHasChanged();
+    }
+
+    private void ApplyFilter()
+    {
+        if (string.IsNullOrEmpty(filterText))
+        {
+            filteredSuppliers = suppliers.ToList();
+        }
+        else
+        {
+            var filter = filterText.ToLower();
+            filteredSuppliers = suppliers.Where(s => 
+                (s.CompanyName?.ToLower().Contains(filter) == true) ||
+                (s.ContactName?.ToLower().Contains(filter) == true) ||
+                (s.ContactTitle?.ToLower().Contains(filter) == true) ||
+                (s.City?.ToLower().Contains(filter) == true) ||
+                (s.Country?.ToLower().Contains(filter) == true)
+            ).ToList();
+        }
+    }
+
+    private Task LoadSuppliers()
+    {
+        var result = DataManager.GetAllSuppliers();
+        if (result.Success)
+        {
+            suppliers = result.Data;
+            ApplyFilter();
+        }
+        else
+        {
+            ShowError("Failed to load suppliers", result.ErrorMessages);
+        }
+        return Task.CompletedTask;
+    }
+
+    private void SelectSupplier(Supplier supplier)
+    {
+        selectedSupplier = new Supplier
+        {
+            SupplierId = supplier.SupplierId,
+            CompanyName = supplier.CompanyName,
+            ContactName = supplier.ContactName,
+            ContactTitle = supplier.ContactTitle,
+            Address = supplier.Address,
+            City = supplier.City,
+            Region = supplier.Region,
+            PostalCode = supplier.PostalCode,
+            Country = supplier.Country,
+            Phone = supplier.Phone,
+            Fax = supplier.Fax,
+            HomePage = supplier.HomePage
+        };
+        ClearError();
+    }
+
+    private void AddNew()
+    {
+        selectedSupplier = new Supplier { SupplierId = 0, CompanyName = "" };
+        ClearError();
+    }
+
+    private Task SaveSupplier()
+    {
+        if (selectedSupplier == null) return Task.CompletedTask;
+
+        ReturnType<Supplier> result;
+        
+        if (selectedSupplier.SupplierId == 0)
+        {
+            result = DataManager.AddSupplier(selectedSupplier);
+        }
+        else
+        {
+            result = DataManager.UpdateSupplier(selectedSupplier);
+        }
+
+        if (result.Success)
+        {
+            _ = LoadSuppliers();
+            if (selectedSupplier.SupplierId == 0 && result.Data != null)
+            {
+                selectedSupplier = result.Data;
+            }
+            ClearError();
+        }
+        else
+        {
+            ShowError($"Failed to {(selectedSupplier.SupplierId == 0 ? "add" : "update")} supplier", result.ErrorMessages);
+        }
+        
+        return Task.CompletedTask;
+    }
+
+    private async Task DeleteSupplier()
+    {
+        if (selectedSupplier == null || selectedSupplier.SupplierId == 0) return;
+
+        if (await JS.InvokeAsync<bool>("confirm", $"Are you sure you want to delete '{selectedSupplier.CompanyName}'?"))
+        {
+            var result = DataManager.DeleteSupplier(selectedSupplier);
+            if (result.Success)
+            {
+                _ = LoadSuppliers();
+                selectedSupplier = null;
+                ClearError();
+            }
+            else
+            {
+                ShowError("Failed to delete supplier", result.ErrorMessages);
+            }
+        }
+    }
+
+    private void ClearSelection()
+    {
+        selectedSupplier = null;
+        ClearError();
+    }
+
+    private void ShowError(string message, List<string> details)
+    {
+        errorMessage = message;
+        errorDetails = details ?? new List<string>();
+        showErrorDetails = false;
+    }
+
+    private void ClearError()
+    {
+        errorMessage = "";
+        errorDetails.Clear();
+        showErrorDetails = false;
+    }
+
+    private void ToggleErrorDetails()
+    {
+        showErrorDetails = !showErrorDetails;
+    }
+}

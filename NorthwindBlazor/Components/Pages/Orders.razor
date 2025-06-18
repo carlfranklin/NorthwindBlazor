@@ -1,0 +1,620 @@
+@page "/orders"
+@using NorthwindBlazor.Models
+@using NorthwindBlazor.Data
+@inject DataManager DataManager
+@inject IJSRuntime JS
+@inject IModalService ModalService
+
+<PageTitle>Orders</PageTitle>
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <h3>Orders</h3>
+        </div>
+    </div>
+    
+    <div class="row">
+        <!-- List Panel -->
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Order List</h5>
+                    <div class="row">
+                        <div class="col-md-8">
+                            <InstantInputText @bind-Value="filterText" @bind-Value:event="oninput" @onkeyup="OnFilterTextChanged" class="form-control" placeholder="Filter orders..." />
+                        </div>
+                        <div class="col-md-4">
+                            <button class="btn btn-primary w-100" @onclick="AddNew">Add New</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body p-0" style="max-height: 70vh; overflow-y: auto;">
+                    <div class="list-group list-group-flush">
+                        <Virtualize Items="filteredOrders" Context="order">
+                            <div class="list-group-item list-group-item-action @(selectedOrder?.OrderId == order.OrderId ? "selected-item" : "")" 
+                                 @onclick="async () => await SelectOrder(order)" style="cursor: pointer;">
+                                <div class="d-flex w-100 justify-content-between">
+                                    <h6 class="mb-1">Order #@order.OrderId</h6>
+                                    <small>@order.OrderDate?.ToString("MMM dd, yyyy")</small>
+                                </div>
+                                <p class="mb-1">Customer: @(order.Customer?.CompanyName ?? order.CustomerId)</p>
+                                <small>Ship to: @order.ShipCity, @order.ShipCountry</small>
+                            </div>
+                        </Virtualize>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Edit Panel -->
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5>@(isAddingNew ? "Add New Order" : $"Edit Order #{selectedOrder?.OrderId}")</h5>
+                </div>
+                <div class="card-body" style="max-height: 70vh; overflow-y: auto;">
+                    @if (selectedOrder != null)
+                    {
+                        <EditForm Model="selectedOrder" OnValidSubmit="HandleValidSubmit">
+                            <DataAnnotationsValidator />
+                            
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="customerId" class="form-label">Customer</label>
+                                    <InputSelect id="customerId" @bind-Value="selectedOrder.CustomerId" class="form-select">
+                                        <option value="">-- Select Customer --</option>
+                                        @foreach (var customer in customers)
+                                        {
+                                            <option value="@customer.CustomerId">@customer.CompanyName</option>
+                                        }
+                                    </InputSelect>
+                                    <ValidationMessage For="() => selectedOrder.CustomerId" />
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="employeeId" class="form-label">Employee</label>
+                                    <InputSelect id="employeeId" @bind-Value="selectedOrder.EmployeeId" class="form-select">
+                                        <option value="">-- Select Employee --</option>
+                                        @foreach (var employee in employees)
+                                        {
+                                            <option value="@employee.EmployeeId">@employee.FirstName @employee.LastName</option>
+                                        }
+                                    </InputSelect>
+                                    <ValidationMessage For="() => selectedOrder.EmployeeId" />
+                                </div>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-4 mb-3">
+                                    <label for="orderDate" class="form-label">Order Date</label>
+                                    <InputDate id="orderDate" @bind-Value="orderDate" class="form-control" />
+                                    <ValidationMessage For="() => selectedOrder.OrderDate" />
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label for="requiredDate" class="form-label">Required Date</label>
+                                    <InputDate id="requiredDate" @bind-Value="requiredDate" class="form-control" />
+                                    <ValidationMessage For="() => selectedOrder.RequiredDate" />
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label for="shippedDate" class="form-label">Shipped Date</label>
+                                    <InputDate id="shippedDate" @bind-Value="shippedDate" class="form-control" />
+                                    <ValidationMessage For="() => selectedOrder.ShippedDate" />
+                                </div>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="shipVia" class="form-label">Ship Via</label>
+                                    <InputSelect id="shipVia" @bind-Value="selectedOrder.ShipVia" class="form-select">
+                                        <option value="">-- Select Shipper --</option>
+                                        @foreach (var shipper in shippers)
+                                        {
+                                            <option value="@shipper.ShipperId">@shipper.CompanyName</option>
+                                        }
+                                    </InputSelect>
+                                    <ValidationMessage For="() => selectedOrder.ShipVia" />
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="freight" class="form-label">Freight</label>
+                                    <InputNumber id="freight" @bind-Value="selectedOrder.Freight" class="form-control" step="0.01" />
+                                    <ValidationMessage For="() => selectedOrder.Freight" />
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="shipName" class="form-label">Ship Name</label>
+                                <InstantInputText id="shipName" @bind-Value="selectedOrder.ShipName" class="form-control" />
+                                <ValidationMessage For="() => selectedOrder.ShipName" />
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="shipAddress" class="form-label">Ship Address</label>
+                                <InstantInputText id="shipAddress" @bind-Value="selectedOrder.ShipAddress" class="form-control" />
+                                <ValidationMessage For="() => selectedOrder.ShipAddress" />
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="shipCity" class="form-label">Ship City</label>
+                                    <InstantInputText id="shipCity" @bind-Value="selectedOrder.ShipCity" class="form-control" />
+                                    <ValidationMessage For="() => selectedOrder.ShipCity" />
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="shipRegion" class="form-label">Ship Region</label>
+                                    <InstantInputText id="shipRegion" @bind-Value="selectedOrder.ShipRegion" class="form-control" />
+                                    <ValidationMessage For="() => selectedOrder.ShipRegion" />
+                                </div>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="shipPostalCode" class="form-label">Ship Postal Code</label>
+                                    <InstantInputText id="shipPostalCode" @bind-Value="selectedOrder.ShipPostalCode" class="form-control" />
+                                    <ValidationMessage For="() => selectedOrder.ShipPostalCode" />
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="shipCountry" class="form-label">Ship Country</label>
+                                    <InstantInputText id="shipCountry" @bind-Value="selectedOrder.ShipCountry" class="form-control" />
+                                    <ValidationMessage For="() => selectedOrder.ShipCountry" />
+                                </div>
+                            </div>
+                            
+                            <ValidationSummary />
+                            
+                            <div class="d-flex gap-2">
+                                <button type="submit" class="btn btn-success">@(isAddingNew ? "Add" : "Update")</button>
+                                @if (!isAddingNew)
+                                {
+                                    <button type="button" class="btn btn-danger" @onclick="ShowDeleteConfirmation">Delete</button>
+                                }
+                                <button type="button" class="btn btn-secondary" @onclick="CancelEdit">Cancel</button>
+                            </div>
+                        </EditForm>
+                        
+                        @if (!isAddingNew && selectedOrder != null)
+                        {
+                            <hr class="my-4" />
+                            
+                            <!-- Order Details Section -->
+                            <div class="mt-4">
+                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <h6>Order Details</h6>
+                                    <button class="btn btn-sm btn-primary" @onclick="AddOrderDetail">
+                                        <i class="bi bi-plus-circle"></i> Add Item
+                                    </button>
+                                </div>
+                                
+                                @if (orderDetails.Any())
+                                {
+                                    <QuickGrid Items="@orderDetails.AsQueryable()" Class="table table-striped table-hover">
+                                        <TemplateColumn Title="Product" Sortable="true">
+                                            @(context.Product?.ProductName ?? "Unknown Product")
+                                        </TemplateColumn>
+                                        <PropertyColumn Property="@(od => od.UnitPrice)" Title="Unit Price" Format="C2" Sortable="true" />
+                                        <PropertyColumn Property="@(od => od.Quantity)" Title="Quantity" Sortable="true" />
+                                        <PropertyColumn Property="@(od => od.Discount * 100)" Title="Discount %" Format="F1" Sortable="true" />
+                                        <PropertyColumn Property="@(od => od.UnitPrice * od.Quantity * (1 - od.Discount))" Title="Total" Format="C2" Sortable="true" />
+                                        <TemplateColumn Title="Actions">
+                                            <div class="btn-group btn-group-sm">
+                                                <button class="btn btn-outline-primary" @onclick="() => EditOrderDetail(context)" title="Edit">
+                                                    <i class="bi bi-pencil"></i>
+                                                </button>
+                                                <button class="btn btn-outline-danger" @onclick="() => DeleteOrderDetail(context)" title="Delete">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            </div>
+                                        </TemplateColumn>
+                                    </QuickGrid>
+                                    
+                                    <div class="mt-3 text-end">
+                                        <strong>Order Total: @orderDetails.Sum(od => od.UnitPrice * od.Quantity * (1 - od.Discount)).ToString("C2")</strong>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="alert alert-info">
+                                        <i class="bi bi-info-circle"></i> No items in this order. Click "Add Item" to add products.
+                                    </div>
+                                }
+                            </div>
+                        }
+                    }
+                    else
+                    {
+                        <p class="text-muted">Select an order to edit or click "Add New" to create a new order.</p>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Error Alert -->
+@if (!string.IsNullOrEmpty(errorMessage))
+{
+    <div class="alert alert-danger alert-dismissible fade show mt-3" role="alert">
+        <strong>Error!</strong> @errorMessage
+        @if (errorDetails.Any())
+        {
+            <button class="btn btn-link p-0 ms-2" type="button" @onclick="ToggleErrorDetails">
+                @(showErrorDetails ? "Hide" : "Show") Details
+            </button>
+            @if (showErrorDetails)
+            {
+                <div class="mt-2">
+                    <ul class="mb-0">
+                        @foreach (var detail in errorDetails)
+                        {
+                            <li>@detail</li>
+                        }
+                    </ul>
+                </div>
+            }
+        }
+        <button type="button" class="btn-close" @onclick="ClearError" aria-label="Close"></button>
+    </div>
+}
+
+<!-- Delete Confirmation Modal -->
+@if (showDeleteModal)
+{
+    <div class="modal fade show" style="display: block;" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Confirm Delete</h5>
+                </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to delete Order #@selectedOrder?.OrderId?</p>
+                    <p class="text-muted">This action cannot be undone.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CancelDelete">Cancel</button>
+                    <button type="button" class="btn btn-danger" @onclick="ConfirmDelete">Delete</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal-backdrop fade show"></div>
+}
+
+<style>
+    .selected-item {
+        background-color: #f8f9fa !important;
+    }
+</style>
+
+@code {
+    private List<Order> orders = new();
+    private List<Order> filteredOrders = new();
+    private List<Customer> customers = new();
+    private List<Employee> employees = new();
+    private List<Shipper> shippers = new();
+    private Order? selectedOrder;
+    private string filterText = "";
+    private bool isAddingNew = false;
+    
+    // OrderDetails management
+    private List<OrderDetail> orderDetails = new();
+    
+    // Date handling properties
+    private DateTime? orderDate
+    {
+        get => selectedOrder?.OrderDate;
+        set => selectedOrder!.OrderDate = value;
+    }
+    
+    private DateTime? requiredDate
+    {
+        get => selectedOrder?.RequiredDate;
+        set => selectedOrder!.RequiredDate = value;
+    }
+    
+    private DateTime? shippedDate
+    {
+        get => selectedOrder?.ShippedDate;
+        set => selectedOrder!.ShippedDate = value;
+    }
+    
+    // Error handling
+    private string errorMessage = "";
+    private List<string> errorDetails = new();
+    private bool showErrorDetails = false;
+    
+    // Delete confirmation
+    private bool showDeleteModal = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        try
+        {
+            // Load orders
+            var orderResult = DataManager.GetAllOrders();
+            if (orderResult.Success)
+            {
+                orders = orderResult.Data;
+                FilterOrders();
+            }
+            else
+            {
+                ShowError("Failed to load orders", orderResult.ErrorMessages);
+            }
+            
+            // Load lookup data
+            var customerResult = DataManager.GetAllCustomers();
+            if (customerResult.Success)
+            {
+                customers = customerResult.Data;
+            }
+            
+            var employeeResult = DataManager.GetAllEmployees();
+            if (employeeResult.Success)
+            {
+                employees = employeeResult.Data;
+            }
+            
+            var shipperResult = DataManager.GetAllShippers();
+            if (shipperResult.Success)
+            {
+                shippers = shipperResult.Data;
+            }
+        }
+        catch (Exception ex)
+        {
+            ShowError("Error loading data", new List<string> { ex.Message });
+        }
+    }
+
+    private void FilterOrders()
+    {
+        if (string.IsNullOrWhiteSpace(filterText))
+        {
+            filteredOrders = orders.ToList();
+        }
+        else
+        {
+            var filter = filterText.ToLower();
+            filteredOrders = orders.Where(o => 
+                o.OrderId.ToString().Contains(filter) ||
+                (o.Customer?.CompanyName?.ToLower().Contains(filter) ?? false) ||
+                (o.CustomerId?.ToLower().Contains(filter) ?? false) ||
+                (o.ShipName?.ToLower().Contains(filter) ?? false) ||
+                (o.ShipCity?.ToLower().Contains(filter) ?? false) ||
+                (o.ShipCountry?.ToLower().Contains(filter) ?? false)
+            ).ToList();
+        }
+    }
+
+    private void OnFilterTextChanged(KeyboardEventArgs e)
+    {
+        FilterOrders();
+        StateHasChanged();
+    }
+
+    private async Task SelectOrder(Order order)
+    {
+        selectedOrder = new Order
+        {
+            OrderId = order.OrderId,
+            CustomerId = order.CustomerId,
+            EmployeeId = order.EmployeeId,
+            OrderDate = order.OrderDate,
+            RequiredDate = order.RequiredDate,
+            ShippedDate = order.ShippedDate,
+            ShipVia = order.ShipVia,
+            Freight = order.Freight,
+            ShipName = order.ShipName,
+            ShipAddress = order.ShipAddress,
+            ShipCity = order.ShipCity,
+            ShipRegion = order.ShipRegion,
+            ShipPostalCode = order.ShipPostalCode,
+            ShipCountry = order.ShipCountry
+        };
+        isAddingNew = false;
+        await LoadOrderDetails();
+        ClearError();
+    }
+
+    private void AddNew()
+    {
+        selectedOrder = new Order();
+        orderDetails.Clear();
+        isAddingNew = true;
+        ClearError();
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        try
+        {
+            if (isAddingNew)
+            {
+                var result = DataManager.AddOrder(selectedOrder!);
+                if (result.Success)
+                {
+                    await LoadData();
+                    selectedOrder = null;
+                    isAddingNew = false;
+                    ClearError();
+                }
+                else
+                {
+                    ShowError("Failed to add order", result.ErrorMessages);
+                }
+            }
+            else
+            {
+                var result = DataManager.UpdateOrder(selectedOrder!);
+                if (result.Success)
+                {
+                    await LoadData();
+                    ClearError();
+                }
+                else
+                {
+                    ShowError("Failed to update order", result.ErrorMessages);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            ShowError("Error saving order", new List<string> { ex.Message });
+        }
+    }
+
+    private void ShowDeleteConfirmation()
+    {
+        showDeleteModal = true;
+    }
+
+    private void CancelDelete()
+    {
+        showDeleteModal = false;
+    }
+
+    private async Task ConfirmDelete()
+    {
+        try
+        {
+            var result = DataManager.DeleteOrder(selectedOrder!);
+            if (result.Success)
+            {
+                await LoadData();
+                selectedOrder = null;
+                isAddingNew = false;
+                showDeleteModal = false;
+                ClearError();
+            }
+            else
+            {
+                ShowError("Failed to delete order", result.ErrorMessages);
+                showDeleteModal = false;
+            }
+        }
+        catch (Exception ex)
+        {
+            ShowError("Error deleting order", new List<string> { ex.Message });
+            showDeleteModal = false;
+        }
+    }
+
+    private void CancelEdit()
+    {
+        selectedOrder = null;
+        isAddingNew = false;
+        ClearError();
+    }
+
+    private void ShowError(string message, List<string> details)
+    {
+        errorMessage = message;
+        errorDetails = details;
+        showErrorDetails = false;
+    }
+
+    private void ClearError()
+    {
+        errorMessage = "";
+        errorDetails.Clear();
+        showErrorDetails = false;
+    }
+
+    private void ToggleErrorDetails()
+    {
+        showErrorDetails = !showErrorDetails;
+    }
+    
+    // OrderDetails Management Methods
+    
+    private async Task LoadOrderDetails()
+    {
+        if (selectedOrder?.OrderId == null) 
+        {
+            orderDetails.Clear();
+            return;
+        }
+        
+        try
+        {
+            var result = DataManager.GetAllOrderDetails();
+            if (result.Success)
+            {
+                orderDetails = result.Data.Where(od => od.OrderId == selectedOrder.OrderId).ToList();
+            }
+            else
+            {
+                ShowError("Failed to load order details", result.ErrorMessages);
+                orderDetails.Clear();
+            }
+        }
+        catch (Exception ex)
+        {
+            ShowError("Error loading order details", new List<string> { ex.Message });
+            orderDetails.Clear();
+        }
+    }
+    
+    private async Task AddOrderDetail()
+    {
+        if (selectedOrder?.OrderId == null) return;
+        
+        var parameters = new ModalParameters()
+            .Add(nameof(OrderDetailModal.OrderId), selectedOrder.OrderId)
+            .Add(nameof(OrderDetailModal.IsEditing), false);
+        
+        var modal = ModalService.Show<OrderDetailModal>("Add Order Detail", parameters);
+        var result = await modal.Result;
+        
+        if (result.Confirmed)
+        {
+            await LoadOrderDetails();
+            StateHasChanged();
+        }
+    }
+    
+    private async Task EditOrderDetail(OrderDetail orderDetail)
+    {
+        var parameters = new ModalParameters()
+            .Add(nameof(OrderDetailModal.OrderDetail), orderDetail)
+            .Add(nameof(OrderDetailModal.OrderId), orderDetail.OrderId)
+            .Add(nameof(OrderDetailModal.IsEditing), true);
+        
+        var modal = ModalService.Show<OrderDetailModal>("Edit Order Detail", parameters);
+        var result = await modal.Result;
+        
+        if (result.Confirmed)
+        {
+            await LoadOrderDetails();
+            StateHasChanged();
+        }
+    }
+    
+    private async Task DeleteOrderDetail(OrderDetail orderDetail)
+    {
+        if (await JS.InvokeAsync<bool>("confirm", $"Are you sure you want to delete this order detail for {orderDetail.Product?.ProductName ?? "this product"}?"))
+        {
+            try
+            {
+                var result = DataManager.DeleteOrderDetail(orderDetail);
+                if (result.Success)
+                {
+                    await LoadOrderDetails();
+                    StateHasChanged();
+                }
+                else
+                {
+                    ShowError("Failed to delete order detail", result.ErrorMessages);
+                }
+            }
+            catch (Exception ex)
+            {
+                ShowError("Error deleting order detail", new List<string> { ex.Message });
+            }
+        }
+    }
+}
