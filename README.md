@@ -2,6 +2,8 @@
 
 In this workshop we will use the GitHub Copilot Coding Agent to help us build a forms-over-data application using the Northwind database.
 
+If you are looking for more general guidance on the entire AI landscape for Blazor developers, not just the Microsoft tools, I encourage you to sign up for my 4-hour webinar at https://www.eventbrite.com/e/a-survey-of-ai-tools-for-net-development-tickets-1413593529299
+
 There is a mindset you need to adopt when working with agents. 
 
 > You are only limited by your imagination. Think big.
@@ -379,10 +381,6 @@ As I went through the app and tested it. When the agent was done, I refreshed th
 > Your experience will most likely be different from mine here. The main part of the application is done. Now I'm just looking for bugs and improvements. Of course, I could have gone on and on, but I merged the PR once it was all basically working.
 
 These are the comments that I added during the final phase:
-
-```
-I'm getting errors loading all models on all forms. For example: "Error in GetAllCategories: Connection string keyword 'version' is not supported. For a possible alternative, see https://go.microsoft.com/fwlink/?linkid=2142181." Also, there is no Orders page. Please implement.
-```
 
 ```
 Please remove the Regions.razor page from the UI and also the related methods from the DataManager. We need to list the OrderDetail records in the Order record on the right. Add a button to Add an OrderDetail. That button should pop up a Modal to add the record. Make sure you have Delete and Edit buttons on each OrderDetail. Perhaps we should use a QuickGrid? Also, the Territories are not loading. I'm getting an error "Error in GetAllRegions: SQLite Error 1: 'no such table: Region'."
